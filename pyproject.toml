@@ -1,5 +1,5 @@
 [project]
-name = "upande_hr_customisations"
+name = "upande_hr"
 authors = [
     { name = "Upande", email = "otieno@upande.com"}
 ]

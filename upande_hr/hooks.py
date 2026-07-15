@@ -1,5 +1,5 @@
-app_name = "upande_hr_customisations"
-app_title = "Upande Hr Customisations"
+app_name = "upande_hr"
+app_title = "Upande Hr"
 app_publisher = "Upande"
 app_description = "HR customisations for Upande"
 app_email = "otieno@upande.com"
@@ -13,11 +13,11 @@ app_license = "mit"
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
 # 	{
-# 		"name": "upande_hr_customisations",
-# 		"logo": "/assets/upande_hr_customisations/logo.png",
-# 		"title": "Upande Hr Customisations",
-# 		"route": "/upande_hr_customisations",
-# 		"has_permission": "upande_hr_customisations.api.permission.has_app_permission"
+# 		"name": "upande_hr",
+# 		"logo": "/assets/upande_hr/logo.png",
+# 		"title": "Upande Hr",
+# 		"route": "/upande_hr",
+# 		"has_permission": "upande_hr.api.permission.has_app_permission"
 # 	}
 # ]
 
@@ -25,15 +25,15 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/upande_hr_customisations/css/upande_hr_customisations.css"
-# app_include_js = "/assets/upande_hr_customisations/js/upande_hr_customisations.js"
+# app_include_css = "/assets/upande_hr/css/upande_hr.css"
+# app_include_js = "/assets/upande_hr/js/upande_hr.js"
 
 # include js, css files in header of web template
-# web_include_css = "/assets/upande_hr_customisations/css/upande_hr_customisations.css"
-# web_include_js = "/assets/upande_hr_customisations/js/upande_hr_customisations.js"
+# web_include_css = "/assets/upande_hr/css/upande_hr.css"
+# web_include_js = "/assets/upande_hr/js/upande_hr.js"
 
 # include custom scss in every website theme (without file extension ".scss")
-# website_theme_scss = "upande_hr_customisations/public/scss/website"
+# website_theme_scss = "upande_hr/public/scss/website"
 
 # include js, css files in header of web form
 # webform_include_js = {"doctype": "public/js/doctype.js"}
@@ -51,7 +51,7 @@ app_license = "mit"
 # Svg Icons
 # ------------------
 # include app icons in desk
-# app_include_icons = "upande_hr_customisations/public/icons.svg"
+# app_include_icons = "upande_hr/public/icons.svg"
 
 # Home Pages
 # ----------
@@ -78,49 +78,49 @@ app_license = "mit"
 
 # add methods and filters to jinja environment
 # jinja = {
-# 	"methods": "upande_hr_customisations.utils.jinja_methods",
-# 	"filters": "upande_hr_customisations.utils.jinja_filters"
+# 	"methods": "upande_hr.utils.jinja_methods",
+# 	"filters": "upande_hr.utils.jinja_filters"
 # }
 
 # Installation
 # ------------
 
-# before_install = "upande_hr_customisations.install.before_install"
-# after_install = "upande_hr_customisations.install.after_install"
+# before_install = "upande_hr.install.before_install"
+# after_install = "upande_hr.install.after_install"
 
 # Uninstallation
 # ------------
 
-# before_uninstall = "upande_hr_customisations.uninstall.before_uninstall"
-# after_uninstall = "upande_hr_customisations.uninstall.after_uninstall"
+# before_uninstall = "upande_hr.uninstall.before_uninstall"
+# after_uninstall = "upande_hr.uninstall.after_uninstall"
 
 # Integration Setup
 # ------------------
 # To set up dependencies/integrations with other apps
 # Name of the app being installed is passed as an argument
 
-# before_app_install = "upande_hr_customisations.utils.before_app_install"
-# after_app_install = "upande_hr_customisations.utils.after_app_install"
+# before_app_install = "upande_hr.utils.before_app_install"
+# after_app_install = "upande_hr.utils.after_app_install"
 
 # Integration Cleanup
 # -------------------
 # To clean up dependencies/integrations with other apps
 # Name of the app being uninstalled is passed as an argument
 
-# before_app_uninstall = "upande_hr_customisations.utils.before_app_uninstall"
-# after_app_uninstall = "upande_hr_customisations.utils.after_app_uninstall"
+# before_app_uninstall = "upande_hr.utils.before_app_uninstall"
+# after_app_uninstall = "upande_hr.utils.after_app_uninstall"
 
 # Build
 # ------------------
 # To hook into the build process
 
-# after_build = "upande_hr_customisations.build.after_build"
+# after_build = "upande_hr.build.after_build"
 
 # Desk Notifications
 # ------------------
 # See frappe.core.notifications.get_notification_config
 
-# notification_config = "upande_hr_customisations.notifications.get_notification_config"
+# notification_config = "upande_hr.notifications.get_notification_config"
 
 # Permissions
 # -----------
@@ -151,47 +151,47 @@ app_license = "mit"
 
 # scheduler_events = {
 # 	"all": [
-# 		"upande_hr_customisations.tasks.all"
+# 		"upande_hr.tasks.all"
 # 	],
 # 	"daily": [
-# 		"upande_hr_customisations.tasks.daily"
+# 		"upande_hr.tasks.daily"
 # 	],
 # 	"hourly": [
-# 		"upande_hr_customisations.tasks.hourly"
+# 		"upande_hr.tasks.hourly"
 # 	],
 # 	"weekly": [
-# 		"upande_hr_customisations.tasks.weekly"
+# 		"upande_hr.tasks.weekly"
 # 	],
 # 	"monthly": [
-# 		"upande_hr_customisations.tasks.monthly"
+# 		"upande_hr.tasks.monthly"
 # 	],
 # }
 
 # Testing
 # -------
 
-# before_tests = "upande_hr_customisations.install.before_tests"
+# before_tests = "upande_hr.install.before_tests"
 
 # Extend DocType Class
 # ------------------------------
 #
 # Specify custom mixins to extend the standard doctype controller.
 # extend_doctype_class = {
-# 	"Task": "upande_hr_customisations.custom.task.CustomTaskMixin"
+# 	"Task": "upande_hr.custom.task.CustomTaskMixin"
 # }
 
 # Overriding Methods
 # ------------------------------
 #
 # override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "upande_hr_customisations.event.get_events"
+# 	"frappe.desk.doctype.event.event.get_events": "upande_hr.event.get_events"
 # }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
-# 	"Task": "upande_hr_customisations.task.get_dashboard_data"
+# 	"Task": "upande_hr.task.get_dashboard_data"
 # }
 
 # exempt linked doctypes from being automatically cancelled
@@ -205,13 +205,13 @@ app_license = "mit"
 
 # Request Events
 # ----------------
-# before_request = ["upande_hr_customisations.utils.before_request"]
-# after_request = ["upande_hr_customisations.utils.after_request"]
+# before_request = ["upande_hr.utils.before_request"]
+# after_request = ["upande_hr.utils.after_request"]
 
 # Job Events
 # ----------
-# before_job = ["upande_hr_customisations.utils.before_job"]
-# after_job = ["upande_hr_customisations.utils.after_job"]
+# before_job = ["upande_hr.utils.before_job"]
+# after_job = ["upande_hr.utils.after_job"]
 
 # User Data Protection
 # --------------------
@@ -241,7 +241,7 @@ app_license = "mit"
 # --------------------------------
 
 # auth_hooks = [
-# 	"upande_hr_customisations.auth.validate"
+# 	"upande_hr.auth.validate"
 # ]
 
 # Automatically update python controller files with type annotations for this app.
