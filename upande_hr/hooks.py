@@ -82,6 +82,16 @@ app_license = "mit"
 # 	"filters": "upande_hr.utils.jinja_filters"
 # }
 
+# Fixtures
+# ------------
+
+fixtures = [
+    {
+        "doctype": "Custom Field",
+        "filters": [["module", "=", "Upande Hr"]],
+    }
+]
+
 # Installation
 # ------------
 
@@ -91,7 +101,7 @@ app_license = "mit"
 # Uninstallation
 # ------------
 
-# before_uninstall = "upande_hr.uninstall.before_uninstall"
+before_uninstall = "upande_hr.install.before_uninstall"
 # after_uninstall = "upande_hr.uninstall.after_uninstall"
 
 # Integration Setup
