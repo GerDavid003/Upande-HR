@@ -195,6 +195,54 @@ class TestCustomCompensatoryLeaveRequest(HRMSTestSuite):
 		self.assertIn("Worked on my weekly off", doc.reason)
 		self.assertIn("Attendance not required", doc.reason)
 
+	def test_is_weekly_off_request_true_for_multi_day_all_weekly_off_range(self):
+		create_leave_period(add_months(today(), -3), add_months(today(), 3), "_Test Company")
+		later_date = today()
+		earlier_date = add_days(later_date, -1)
+		holiday_list_name = "_Test Upande HR Multi Day Weekly Off"
+		if frappe.db.exists("Holiday List", holiday_list_name):
+			frappe.db.delete("Holiday List", holiday_list_name)
+			frappe.db.delete("Holiday", {"parent": holiday_list_name})
+
+		holiday_list = frappe.get_doc(
+			{
+				"doctype": "Holiday List",
+				"holiday_list_name": holiday_list_name,
+				"from_date": add_months(today(), -3),
+				"to_date": add_months(today(), 3),
+				"holidays": [
+					{
+						"description": "Weekly Off",
+						"holiday_date": earlier_date,
+						"weekly_off": 1,
+					},
+					{
+						"description": "Weekly Off",
+						"holiday_date": later_date,
+						"weekly_off": 1,
+					},
+				],
+			}
+		)
+		holiday_list.save()
+		employee = get_employee()
+		create_holiday_list_assignment("Employee", employee.name, holiday_list.name)
+
+		# no Attendance record created for either day
+		doc = frappe.get_doc(
+			{
+				"doctype": "Compensatory Leave Request",
+				"employee": employee.name,
+				"leave_type": "Compensatory Off",
+				"work_from_date": earlier_date,
+				"work_end_date": later_date,
+				"reason": "test",
+			}
+		)
+		self.assertTrue(doc.is_weekly_off_request())
+		doc.insert()
+		doc.submit()  # must not raise
+
 	def test_weekly_off_note_not_duplicated_on_resave(self):
 		create_leave_period(add_months(today(), -3), add_months(today(), 3), "_Test Company")
 		weekly_off_date = today()
