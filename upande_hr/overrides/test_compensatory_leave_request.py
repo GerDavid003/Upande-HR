@@ -3,6 +3,9 @@ from frappe.utils import add_days, add_months, today
 from hrms.tests.utils import HRMSTestSuite
 
 from hrms.hr.doctype.attendance_request.test_attendance_request import get_employee
+from hrms.hr.doctype.compensatory_leave_request.test_compensatory_leave_request import (
+	mark_attendance,
+)
 from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import (
 	create_holiday_list_assignment,
 )
@@ -103,3 +106,68 @@ class TestCustomCompensatoryLeaveRequest(HRMSTestSuite):
 			}
 		)
 		self.assertFalse(doc.is_weekly_off_request())
+
+	def test_weekly_off_bypasses_attendance_check(self):
+		create_leave_period(add_months(today(), -3), add_months(today(), 3), "_Test Company")
+		weekly_off_date = today()
+		holiday_list = create_holiday_list_with_weekly_off(weekly_off_date)
+		employee = get_employee()
+		create_holiday_list_assignment("Employee", employee.name, holiday_list.name)
+
+		# no Attendance record created for weekly_off_date
+		doc = frappe.get_doc(
+			{
+				"doctype": "Compensatory Leave Request",
+				"employee": employee.name,
+				"leave_type": "Compensatory Off",
+				"work_from_date": weekly_off_date,
+				"work_end_date": weekly_off_date,
+				"reason": "test",
+			}
+		)
+		doc.insert()
+		doc.submit()  # must not raise
+
+	def test_regular_holiday_without_attendance_still_blocked(self):
+		create_leave_period(add_months(today(), -3), add_months(today(), 3), "_Test Company")
+		weekly_off_date = today()
+		regular_holiday_date = add_days(weekly_off_date, -1)
+		holiday_list = create_holiday_list_with_weekly_off(weekly_off_date)
+		employee = get_employee()
+		create_holiday_list_assignment("Employee", employee.name, holiday_list.name)
+
+		# no Attendance record created for regular_holiday_date
+		doc = frappe.get_doc(
+			{
+				"doctype": "Compensatory Leave Request",
+				"employee": employee.name,
+				"leave_type": "Compensatory Off",
+				"work_from_date": regular_holiday_date,
+				"work_end_date": regular_holiday_date,
+				"reason": "test",
+			}
+		)
+		# validate() runs on insert() too, so the block surfaces there already
+		self.assertRaises(frappe.ValidationError, doc.insert)
+
+	def test_regular_holiday_with_attendance_still_allowed(self):
+		create_leave_period(add_months(today(), -3), add_months(today(), 3), "_Test Company")
+		weekly_off_date = today()
+		regular_holiday_date = add_days(weekly_off_date, -1)
+		holiday_list = create_holiday_list_with_weekly_off(weekly_off_date)
+		employee = get_employee()
+		create_holiday_list_assignment("Employee", employee.name, holiday_list.name)
+		mark_attendance(employee, date=regular_holiday_date)
+
+		doc = frappe.get_doc(
+			{
+				"doctype": "Compensatory Leave Request",
+				"employee": employee.name,
+				"leave_type": "Compensatory Off",
+				"work_from_date": regular_holiday_date,
+				"work_end_date": regular_holiday_date,
+				"reason": "test",
+			}
+		)
+		doc.insert()
+		doc.submit()  # must not raise

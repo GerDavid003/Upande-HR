@@ -23,3 +23,8 @@ class CustomCompensatoryLeaveRequest(CompensatoryLeaveRequest):
 			pluck="holiday_date",
 		)
 		return len(weekly_off_days) == total_days
+
+	def validate_attendance(self):
+		if self.is_weekly_off_request():
+			return
+		super().validate_attendance()
