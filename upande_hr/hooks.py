@@ -92,6 +92,13 @@ fixtures = [
     }
 ]
 
+# Doctype Class Overrides
+# ------------------------
+
+override_doctype_class = {
+	"Compensatory Leave Request": "upande_hr.overrides.compensatory_leave_request.CustomCompensatoryLeaveRequest"
+}
+
 # Installation
 # ------------
 
