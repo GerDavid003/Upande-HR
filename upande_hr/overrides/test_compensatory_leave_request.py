@@ -83,3 +83,23 @@ class TestCustomCompensatoryLeaveRequest(HRMSTestSuite):
 			}
 		)
 		self.assertFalse(doc.is_weekly_off_request())
+
+	def test_is_weekly_off_request_false_when_range_mixes_weekly_off_and_regular_holiday(self):
+		create_leave_period(add_months(today(), -3), add_months(today(), 3), "_Test Company")
+		weekly_off_date = today()
+		regular_holiday_date = add_days(weekly_off_date, -1)
+		holiday_list = create_holiday_list_with_weekly_off(weekly_off_date)
+		employee = get_employee()
+		create_holiday_list_assignment("Employee", employee.name, holiday_list.name)
+
+		doc = frappe.new_doc("Compensatory Leave Request")
+		doc.update(
+			{
+				"employee": employee.name,
+				"leave_type": "Compensatory Off",
+				"work_from_date": regular_holiday_date,
+				"work_end_date": weekly_off_date,
+				"reason": "test",
+			}
+		)
+		self.assertFalse(doc.is_weekly_off_request())
