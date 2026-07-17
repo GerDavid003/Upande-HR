@@ -19,6 +19,8 @@
 - Site to verify against: `david.local`. Known transient `bench migrate` issue on this bench: `frappe.exceptions.QueueOverloaded: Too many queued background jobs (550)`. Fix: `bench --site david.local set-config max_queued_jobs 5000`, retry, then `bench --site david.local set-config max_queued_jobs 500` afterward. Don't leave it raised.
 - JSON files in this codebase are formatted exactly like `frappe.as_json`: `json.dumps(data, indent=1, sort_keys=True, ensure_ascii=True, separators=(",", ": "))`.
 
+**Addendum (mid-execution, approved by user during Task 3):** Leave Application's unrelated `custom_mobile_number` field was also removed entirely (not re-homed anywhere) as a separate, small scope addition. Task 1's steps below describe the file as ending up with 2 remaining custom_fields (`custom_mobile_number`, `workflow_state`) — in the executed result, only `workflow_state` remains; `custom_mobile_number` was removed in the same pass via the same patch. See Task 4/5 reports for the exact sequence.
+
 ---
 
 ### Task 1: Remove the old Compassionate Leave customization from `upande_kaitet`
