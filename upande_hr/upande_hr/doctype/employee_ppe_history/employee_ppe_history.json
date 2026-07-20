@@ -1,0 +1,103 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-07-20 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "ppe_assignment",
+  "item_code",
+  "quantity",
+  "issue_date",
+  "expiry_date",
+  "status",
+  "stock_entry",
+  "column_break_qqmj",
+  "ppe_inspection",
+  "last_inspection_date",
+  "last_inspection_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "ppe_assignment",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "PPE Assignment",
+   "options": "Employee PPE Assignment"
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item Code",
+   "options": "Item"
+  },
+  {
+   "fieldname": "quantity",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Quantity",
+   "precision": "6"
+  },
+  {
+   "fieldname": "issue_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Issue Date"
+  },
+  {
+   "fieldname": "expiry_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Expiry Date"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Active\nInactive\nExpired\nReturned"
+  },
+  {
+   "fieldname": "stock_entry",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "options": "Stock Entry"
+  },
+  {
+   "fieldname": "column_break_qqmj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ppe_inspection",
+   "fieldtype": "Link",
+   "label": "PPE Inspection",
+   "options": "PPE Inspection"
+  },
+  {
+   "fieldname": "last_inspection_date",
+   "fieldtype": "Date",
+   "label": "Last Inspection Date"
+  },
+  {
+   "fieldname": "last_inspection_status",
+   "fieldtype": "Data",
+   "label": "Last Inspection Status"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Hr",
+ "name": "Employee PPE History",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
