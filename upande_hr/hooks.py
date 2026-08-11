@@ -156,13 +156,11 @@ before_uninstall = "upande_hr.install.before_uninstall"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Employee": {
+		"validate": "upande_hr.overrides.employee.validate_reason_for_exit_when_left",
+	},
+}
 
 # Scheduled Tasks
 # ---------------
