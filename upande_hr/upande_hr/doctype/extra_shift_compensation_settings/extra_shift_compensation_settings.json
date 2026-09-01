@@ -1,0 +1,82 @@
+{
+ "actions": [],
+ "creation": "2026-09-01 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "leave_type",
+  "max_backdate_days",
+  "column_break_settings_1",
+  "overtime_overlap_action"
+ ],
+ "fields": [
+  {
+   "default": "Compensatory Off Day",
+   "description": "Leave Type credited when an Extra Shift Compensation row is approved.",
+   "fieldname": "leave_type",
+   "fieldtype": "Link",
+   "label": "Leave Type",
+   "options": "Leave Type",
+   "reqd": 1
+  },
+  {
+   "default": "30",
+   "description": "How far back a Work Date may be. 0 means today only.",
+   "fieldname": "max_backdate_days",
+   "fieldtype": "Int",
+   "label": "Max Backdate Days",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "column_break_settings_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Block",
+   "description": "What to do when a submitted Bulk Overtime entry already covers the same employee and date.",
+   "fieldname": "overtime_overlap_action",
+   "fieldtype": "Select",
+   "label": "Overtime Overlap Action",
+   "options": "Block\nWarn\nIgnore"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-01 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Upande Hr",
+ "name": "Extra Shift Compensation Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Director"
+  },
+  {
+   "read": 1,
+   "role": "HOD"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

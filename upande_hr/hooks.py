@@ -8,7 +8,10 @@ app_license = "mit"
 # Apps
 # ------------------
 
-# required_apps = []
+# Bulk Overtime Entry (upande_ta) is read when checking for an overtime overlap on
+# the same employee/date. Every read of it is still guarded with frappe.db.exists so
+# the check degrades quietly rather than hard-failing.
+required_apps = ["upande_ta"]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
@@ -85,11 +88,33 @@ app_license = "mit"
 # Fixtures
 # ------------
 
+# Filtered by name rather than by module: a module filter sweeps in every Custom Field
+# anyone later tags to "Upande Hr", including ones this app never created.
+#
+# The Employee statutory fields (national_id, tax_id, nssf_no, sha_no and their column
+# break) are deliberately NOT here. TSH already carries an equivalent, correctly
+# prefixed set — custom_national_id_no, custom_kra_pin, custom_nssf_no, custom_sha_no —
+# inside its own custom_statutory_details section, so shipping the unprefixed ones would
+# put a second, duplicate block of statutory fields on the Employee form. They need the
+# custom_ prefix before they ship anywhere; that is a separate PR against main.
 fixtures = [
-    {
-        "doctype": "Custom Field",
-        "filters": [["module", "=", "Upande Hr"]],
-    }
+	{
+		"doctype": "Custom Field",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Attendance-custom_comp_off_override",
+					"Attendance-custom_comp_off_request",
+				],
+			]
+		],
+	},
+	{
+		"doctype": "Workflow",
+		"filters": [["name", "in", ["Extra Shift Compensation Approval"]]],
+	},
 ]
 
 # Doctype Class Overrides
@@ -155,13 +180,13 @@ before_uninstall = "upande_hr.install.before_uninstall"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Attendance": {
+		# Runs after Attendance.validate(), so it gets the last word over
+		# check_leave_record() reassigning status back to "On Leave".
+		"validate": "upande_hr.overrides.attendance.reassert_comp_off_override"
+	}
+}
 
 # Scheduled Tasks
 # ---------------
@@ -272,4 +297,3 @@ before_uninstall = "upande_hr.install.before_uninstall"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-
