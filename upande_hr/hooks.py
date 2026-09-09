@@ -91,12 +91,13 @@ required_apps = ["upande_ta"]
 # Filtered by name rather than by module: a module filter sweeps in every Custom Field
 # anyone later tags to "Upande Hr", including ones this app never created.
 #
-# The Employee statutory fields (national_id, tax_id, nssf_no, sha_no and their column
-# break) are deliberately NOT here. TSH already carries an equivalent, correctly
-# prefixed set — custom_national_id_no, custom_kra_pin, custom_nssf_no, custom_sha_no —
-# inside its own custom_statutory_details section, so shipping the unprefixed ones would
-# put a second, duplicate block of statutory fields on the Employee form. They need the
-# custom_ prefix before they ship anywhere; that is a separate PR against main.
+# One Custom Field entry only. export_fixtures names the output file after the doctype
+# (frappe.scrub) and opens it with "w", so a second {"doctype": "Custom Field"} block
+# would silently overwrite this one on export. New Custom Fields go in the list below.
+#
+# The unprefixed statutory fields carried on main (national_id, tax_id, nssf_no, sha_no
+# and custom_column_break_statutory) are deliberately NOT here — they duplicate the
+# custom_-prefixed set below and must not ship to TSH.
 fixtures = [
 	{
 		"doctype": "Custom Field",
@@ -107,6 +108,17 @@ fixtures = [
 				[
 					"Attendance-custom_comp_off_override",
 					"Attendance-custom_comp_off_request",
+					# Employee statutory details, Personal Details tab. Ordered as the
+					# section renders: section break, left column, column break, right
+					# column. upande_ats anchors its Next of Kin section on
+					# Employee-custom_sha_no, so this set has to ship intact.
+					"Employee-custom_statutory_details",
+					"Employee-custom_national_id_no",
+					"Employee-custom_kra_pin",
+					"Employee-custom_column_break_7csev",
+					"Employee-custom_nssf_no",
+					"Employee-custom_sha_no",
+					"Employee-custom_nationality",
 				],
 			]
 		],
