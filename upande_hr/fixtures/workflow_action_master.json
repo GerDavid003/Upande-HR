@@ -1,0 +1,50 @@
+[
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-09-16 00:00:00",
+  "name": "Start Investigation",
+  "workflow_action_name": "Start Investigation"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-09-16 00:00:00",
+  "name": "Schedule Hearing",
+  "workflow_action_name": "Schedule Hearing"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-09-16 00:00:00",
+  "name": "Close - No Case",
+  "workflow_action_name": "Close - No Case"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-09-16 00:00:00",
+  "name": "Record Hearing",
+  "workflow_action_name": "Record Hearing"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-09-16 00:00:00",
+  "name": "Record Decision",
+  "workflow_action_name": "Record Decision"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-09-16 00:00:00",
+  "name": "Close Case",
+  "workflow_action_name": "Close Case"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-09-16 00:00:00",
+  "name": "Request Appeal",
+  "workflow_action_name": "Request Appeal"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-09-16 00:00:00",
+  "name": "Schedule Appeal Hearing",
+  "workflow_action_name": "Schedule Appeal Hearing"
+ }
+]

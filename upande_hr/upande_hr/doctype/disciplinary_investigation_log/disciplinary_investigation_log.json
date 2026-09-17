@@ -1,0 +1,60 @@
+{
+ "actions": [],
+ "creation": "2026-09-16 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "log_date",
+  "logged_by",
+  "activity_type",
+  "summary",
+  "attachment"
+ ],
+ "fields": [
+  {
+   "fieldname": "log_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "logged_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Logged By",
+   "options": "User"
+  },
+  {
+   "fieldname": "activity_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Activity",
+   "options": "Interview\nEvidence Collected\nSite Visit\nNote\nOther"
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Summary"
+  },
+  {
+   "fieldname": "attachment",
+   "fieldtype": "Attach",
+   "label": "Attachment"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-16 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Upande Hr",
+ "name": "Disciplinary Investigation Log",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

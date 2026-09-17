@@ -119,13 +119,72 @@ fixtures = [
 					"Employee-custom_nssf_no",
 					"Employee-custom_sha_no",
 					"Employee-custom_nationality",
+					# Derived from date_of_joining by overrides/employee.py. Stored, not
+					# virtual, so HR can filter and report on it.
+					"Employee-custom_years_of_service",
+					# Ethnicity sits next to Nationality. Sensitive personal data under
+					# the Data Protection Act 2019, currently at permlevel 0.
+					"Employee-custom_ethnicity",
+					# Family Members, its own collapsible section so the Table does not
+					# land inside someone else's two-column layout. Anchored on
+					# Employee-custom_sha_no, which upande_hr ships itself - anchoring on
+					# upande_ats' Next of Kin fields would be a dependency this app does
+					# not declare in required_apps.
+					"Employee-custom_family_members_section",
+					"Employee-custom_family_members",
+					# Salary tab. Its label was blanked by an Export Customizations pass
+					# and is restored from here - see the note in fixtures/custom_field.json.
+					"Employee-custom_appraisal_section",
 				],
 			]
 		],
 	},
 	{
 		"doctype": "Workflow",
-		"filters": [["name", "in", ["Extra Shift Compensation Approval"]]],
+		"filters": [
+			["name", "in", ["Extra Shift Compensation Approval", "Disciplinary Case Workflow"]]
+		],
+	},
+	# The Disciplinary Case workflow references states and actions that do not ship with
+	# Frappe, and a Workflow fixture does not pull its masters along. Without these two
+	# the workflow imports against rows that do not exist and the transitions never bind.
+	# "Open" is a stock Workflow State and is deliberately not re-shipped.
+	{
+		"doctype": "Workflow State",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Under Investigation",
+					"Hearing Scheduled",
+					"Hearing Held",
+					"Decision",
+					"Appeal Requested",
+					"Appeal Hearing",
+					"Closed",
+				],
+			]
+		],
+	},
+	{
+		"doctype": "Workflow Action Master",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Start Investigation",
+					"Schedule Hearing",
+					"Close - No Case",
+					"Record Hearing",
+					"Record Decision",
+					"Close Case",
+					"Request Appeal",
+					"Schedule Appeal Hearing",
+				],
+			]
+		],
 	},
 ]
 
@@ -140,7 +199,12 @@ override_doctype_class = {
 # ------------
 
 # before_install = "upande_hr.install.before_install"
-# after_install = "upande_hr.install.after_install"
+after_install = "upande_hr.install.after_install"
+
+# Tenure is an HRMS-shipped workspace, so the Case Management card cannot live in its
+# JSON. It is re-asserted after every migrate instead: a workspace re-import from the
+# shipped file replaces the row wholesale, which a one-shot patch would not survive.
+after_migrate = "upande_hr.install.after_migrate"
 
 # Uninstallation
 # ------------
@@ -180,13 +244,14 @@ before_uninstall = "upande_hr.install.before_uninstall"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+# Sexual-harassment grievances are visible only to HR Manager, Group HR Manager and
+# System Manager. The query condition scopes list and report views; has_permission
+# closes the direct-link route that a Permission Query alone leaves open.
+permission_query_conditions = {
+	"Employee Grievance": "upande_hr.overrides.employee_grievance.get_permission_query_conditions"
+}
+
+has_permission = {"Employee Grievance": "upande_hr.overrides.employee_grievance.has_permission"}
 
 # Document Events
 # ---------------
@@ -197,11 +262,23 @@ doc_events = {
 		# Runs after Attendance.validate(), so it gets the last word over
 		# check_leave_record() reassigning status back to "On Leave".
 		"validate": "upande_hr.overrides.attendance.reassert_comp_off_override"
-	}
+	},
+	"Employee": {
+		# On validate rather than on the nightly job alone, so the figure is right the
+		# moment a joining date is entered or corrected.
+		"validate": "upande_hr.overrides.employee.set_years_of_service"
+	},
 }
 
 # Scheduled Tasks
 # ---------------
+
+scheduler_events = {
+	"daily": [
+		"upande_hr.upande_hr.doctype.disciplinary_warning.disciplinary_warning.lapse_expired_warnings",
+		"upande_hr.overrides.employee.refresh_years_of_service",
+	]
+}
 
 # scheduler_events = {
 # 	"all": [

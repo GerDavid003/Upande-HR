@@ -1,0 +1,318 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "naming_series:",
+ "creation": "2026-09-16 00:00:00",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "employee",
+  "employee_name",
+  "department",
+  "designation",
+  "col_break_1",
+  "category",
+  "severity",
+  "date_reported",
+  "incident_date",
+  "sec_details",
+  "description",
+  "grounds",
+  "sec_absence",
+  "absence_from",
+  "absence_to",
+  "absence_summary",
+  "sec_external",
+  "external_party",
+  "external_reference",
+  "external_notes",
+  "sec_investigation",
+  "investigation_log",
+  "sec_hearing",
+  "hearings",
+  "sec_decision",
+  "decision_outcome",
+  "decision_date",
+  "col_break_2",
+  "decision_notes",
+  "sec_closure",
+  "closed_on",
+  "resolution_summary",
+  "workflow_state"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "no_copy": 1,
+   "options": "HR-DISC-.YYYY.-",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.department",
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.designation",
+   "fieldname": "designation",
+   "fieldtype": "Link",
+   "label": "Designation",
+   "options": "Designation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Disciplinary",
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Category",
+   "options": "Disciplinary\nAbsenteeism\nLabour Dispute",
+   "reqd": 1
+  },
+  {
+   "default": "Medium",
+   "fieldname": "severity",
+   "fieldtype": "Select",
+   "label": "Severity",
+   "options": "Low\nMedium\nHigh\nCritical"
+  },
+  {
+   "default": "Today",
+   "fieldname": "date_reported",
+   "fieldtype": "Date",
+   "label": "Date Reported",
+   "reqd": 1
+  },
+  {
+   "fieldname": "incident_date",
+   "fieldtype": "Date",
+   "label": "Incident Date"
+  },
+  {
+   "fieldname": "sec_details",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text",
+   "label": "Summary / Allegation",
+   "reqd": 1
+  },
+  {
+   "fieldname": "grounds",
+   "fieldtype": "Text",
+   "label": "Grounds / Policy Breached"
+  },
+  {
+   "depends_on": "eval:doc.category=='Absenteeism'",
+   "fieldname": "sec_absence",
+   "fieldtype": "Section Break",
+   "label": "Absence Details"
+  },
+  {
+   "fieldname": "absence_from",
+   "fieldtype": "Date",
+   "label": "Absent From"
+  },
+  {
+   "fieldname": "absence_to",
+   "fieldtype": "Date",
+   "label": "Absent To"
+  },
+  {
+   "fieldname": "absence_summary",
+   "fieldtype": "Small Text",
+   "label": "Absence Summary"
+  },
+  {
+   "depends_on": "eval:doc.category=='Labour Dispute'",
+   "fieldname": "sec_external",
+   "fieldtype": "Section Break",
+   "label": "External Parties"
+  },
+  {
+   "fieldname": "external_party",
+   "fieldtype": "Data",
+   "label": "External Party (Union / Ministry / Court)"
+  },
+  {
+   "fieldname": "external_reference",
+   "fieldtype": "Data",
+   "label": "External Reference No."
+  },
+  {
+   "fieldname": "external_notes",
+   "fieldtype": "Small Text",
+   "label": "External Notes"
+  },
+  {
+   "fieldname": "sec_investigation",
+   "fieldtype": "Section Break",
+   "label": "Investigation"
+  },
+  {
+   "fieldname": "investigation_log",
+   "fieldtype": "Table",
+   "label": "Investigation Log",
+   "options": "Disciplinary Investigation Log"
+  },
+  {
+   "fieldname": "sec_hearing",
+   "fieldtype": "Section Break",
+   "label": "Hearings"
+  },
+  {
+   "fieldname": "hearings",
+   "fieldtype": "Table",
+   "label": "Hearings",
+   "options": "Disciplinary Hearing"
+  },
+  {
+   "fieldname": "sec_decision",
+   "fieldtype": "Section Break",
+   "label": "Decision"
+  },
+  {
+   "fieldname": "decision_outcome",
+   "fieldtype": "Select",
+   "label": "Decision Outcome",
+   "options": "\nNo Case to Answer\nVerbal Warning\nFirst Written Warning\nFinal Written Warning\nSuspension\nDismissal\nReferred\nResolved"
+  },
+  {
+   "fieldname": "decision_date",
+   "fieldtype": "Date",
+   "label": "Decision Date"
+  },
+  {
+   "fieldname": "col_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "decision_notes",
+   "fieldtype": "Text",
+   "label": "Decision Notes"
+  },
+  {
+   "fieldname": "sec_closure",
+   "fieldtype": "Section Break",
+   "label": "Closure"
+  },
+  {
+   "fieldname": "closed_on",
+   "fieldtype": "Date",
+   "label": "Closed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "resolution_summary",
+   "fieldtype": "Text",
+   "label": "Resolution Summary"
+  },
+  {
+   "fieldname": "workflow_state",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Workflow State",
+   "no_copy": 1,
+   "options": "Workflow State",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-09-16 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Upande Hr",
+ "name": "Disciplinary Case",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Group HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "employee,employee_name,category",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "employee_name",
+ "track_changes": 1
+}

@@ -53,3 +53,8 @@ jspm_packages/
 
 # Aider AI Chat
 .aider*
+
+# Employee customizations ship as fixtures; an Export Customizations file overrides
+# them on migrate because sync_customizations runs after sync_fixtures.
+upande_hr/custom/
+upande_hr/upande_hr/custom/

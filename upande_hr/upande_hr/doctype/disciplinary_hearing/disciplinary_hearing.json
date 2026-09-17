@@ -1,0 +1,72 @@
+{
+ "actions": [],
+ "creation": "2026-09-16 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "hearing_date",
+  "panel",
+  "employee_present",
+  "representation",
+  "findings",
+  "outcome",
+  "outcome_notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "hearing_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Hearing Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "panel",
+   "fieldtype": "Small Text",
+   "label": "Panel Members"
+  },
+  {
+   "default": "0",
+   "fieldname": "employee_present",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Employee Present"
+  },
+  {
+   "description": "Employment Act s.41 \u2014 the employee may be accompanied by a fellow employee or union representative.",
+   "fieldname": "representation",
+   "fieldtype": "Data",
+   "label": "Representative / Accompanied By"
+  },
+  {
+   "fieldname": "findings",
+   "fieldtype": "Small Text",
+   "label": "Findings"
+  },
+  {
+   "fieldname": "outcome",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Outcome",
+   "options": "\nNo Case to Answer\nVerbal Warning\nFirst Written Warning\nFinal Written Warning\nSuspension\nDismissal\nReferred\nResolved"
+  },
+  {
+   "fieldname": "outcome_notes",
+   "fieldtype": "Small Text",
+   "label": "Outcome Notes"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-16 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Upande Hr",
+ "name": "Disciplinary Hearing",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
