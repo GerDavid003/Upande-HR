@@ -112,6 +112,17 @@ fixtures = [
 					# section renders: section break, left column, column break, right
 					# column. upande_ats anchors its Next of Kin section on
 					# Employee-custom_sha_no, so this set has to ship intact.
+					#
+					# The anchor chain from here on is strictly linear - one dependant per
+					# anchor - and every link after the first points at a Custom Field,
+					# deliberately. Meta.sort_fields walks a Section Break or Column Break
+					# forward from a *standard* anchor to the end of that section, and the
+					# walk stops at a Section Break but not at a Tab Break, so such a field
+					# anchored on the last field of a tab silently lands in the next tab.
+					# custom_statutory_details anchored on place_of_issue did exactly that:
+					# it walked past profile_tab and landed after bio, dragging the chain
+					# into Profile. health_insurance_no is an HRMS Custom Field, not a
+					# standard field, so the walk is skipped and the section stays put.
 					"Employee-custom_statutory_details",
 					"Employee-custom_national_id_no",
 					"Employee-custom_kra_pin",
@@ -135,6 +146,25 @@ fixtures = [
 					# Salary tab. Its label was blanked by an Export Customizations pass
 					# and is restored from here - see the note in fixtures/custom_field.json.
 					"Employee-custom_appraisal_section",
+					# Talent pool. Both fields sit at permlevel 1 on Employee, so the
+					# permlevel-1 DocPerm rows added by
+					# patches.v1_0.add_talent_pool_permlevel have to land or they are
+					# invisible to everyone.
+					"Employee-custom_talent_pool",
+					"Employee-custom_talent_pool_designations",
+					# upande_ats' candidate regret notification branches on
+					# Job Applicant.custom_talent_pool, so this field must ship intact.
+					# It was a hand-made Desk field on this site that no app shipped;
+					# adopted here under its original name, type and anchor rather than
+					# renamed, so that template keeps working on a fresh deploy.
+					"Job Applicant-custom_talent_pool",
+					"Job Applicant-custom_talent_pool_designations",
+					# Another hand-made Desk field no app shipped, adopted under its
+					# existing fieldname so the 13 flagged Employee records and the three
+					# site Server Scripts that read it keep working. Re-anchored from
+					# custom_group_name to department, where it belongs. A Check field, so
+					# the Section Break walk above does not apply to it.
+					"Employee-custom_is_hod",
 				],
 			]
 		],
