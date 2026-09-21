@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.permissions import get_user_permissions
+from frappe.utils import getdate, nowdate
 
 STATUS_OPTIONS = ["Active", "Inactive", "Suspended", "Left"]
 
@@ -116,6 +117,76 @@ def _count_employees(conditions, or_filters):
 	)
 
 
+def _current_shifts(employee_names):
+	if not employee_names:
+		return {}
+	today = nowdate()
+	rows = frappe.get_list(
+		"Shift Assignment",
+		filters=[
+			["employee", "in", employee_names],
+			["status", "=", "Active"],
+			["docstatus", "=", 1],
+			["start_date", "<=", today],
+		],
+		or_filters=[["end_date", "is", "not set"], ["end_date", ">=", today]],
+		fields=["employee", "shift_type"],
+		order_by="creation desc",
+	)
+	by_employee = {}
+	for row in rows:
+		by_employee.setdefault(row.employee, row.shift_type)
+	return by_employee
+
+
+def _current_week_offs(employee_names):
+	"""Holiday List Assignment.holiday_list_start/holiday_list_end are virtual
+	fields (see holiday_list_assignment.py), not database columns, so they
+	can't be used in a filter here. Instead: fetch the candidate assignments,
+	then check each one's linked Holiday List's real from_date/to_date columns
+	in Python.
+	"""
+	if not employee_names:
+		return {}
+	today = getdate()
+	rows = frappe.get_list(
+		"Holiday List Assignment",
+		filters=[
+			["applicable_for", "=", "Employee"],
+			["assigned_to", "in", employee_names],
+			["docstatus", "=", 1],
+		],
+		fields=["assigned_to", "holiday_list"],
+		order_by="creation desc",
+	)
+	if not rows:
+		return {}
+
+	holiday_list_names = list({row.holiday_list for row in rows if row.holiday_list})
+	holiday_lists = {
+		holiday_list.name: holiday_list
+		for holiday_list in frappe.get_list(
+			"Holiday List",
+			filters=[["name", "in", holiday_list_names]],
+			fields=["name", "from_date", "to_date", "weekly_off"],
+		)
+	}
+
+	by_employee = {}
+	for row in rows:
+		if row.assigned_to in by_employee:
+			continue
+		holiday_list = holiday_lists.get(row.holiday_list)
+		if not holiday_list:
+			continue
+		if getdate(holiday_list.from_date) > today:
+			continue
+		if holiday_list.to_date and getdate(holiday_list.to_date) < today:
+			continue
+		by_employee[row.assigned_to] = holiday_list.weekly_off
+	return by_employee
+
+
 @frappe.whitelist()
 def get_dashboard_data(
 	company=None,
@@ -144,6 +215,13 @@ def get_dashboard_data(
 		start=start,
 		limit=page_length,
 	)
+
+	page_names = [employee.name for employee in employees]
+	shifts = _current_shifts(page_names)
+	week_offs = _current_week_offs(page_names)
+	for employee in employees:
+		employee["shift"] = shifts.get(employee.name)
+		employee["week_off"] = week_offs.get(employee.name)
 
 	gender_breakdown = frappe.get_list(
 		"Employee",

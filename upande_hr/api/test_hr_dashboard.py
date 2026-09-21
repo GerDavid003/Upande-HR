@@ -95,3 +95,41 @@ class IntegrationTestHRDashboardDataCompanyScoping(IntegrationTestCase):
 		result = hr_dashboard.get_dashboard_data(company="Kaitet Ltd.", page_length=1)
 		self.assertEqual(result["total"], 0)
 		self.assertEqual(result["employees"], [])
+
+
+class IntegrationTestHRDashboardShiftAndWeekOff(IntegrationTestCase):
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def test_employee_with_no_active_shift_shows_blank(self):
+		frappe.set_user("teddy@upande.com")
+		employees_with_shifts = frappe.get_all("Shift Assignment", pluck="employee")
+		employees = frappe.get_all(
+			"Employee",
+			filters={"name": ["not in", employees_with_shifts or ["__none__"]]},
+			limit=1,
+			pluck="name",
+		)
+		if not employees:
+			self.skipTest("Every Employee has at least one Shift Assignment on this site.")
+		employee_name = frappe.db.get_value("Employee", employees[0], "employee_name")
+		result = hr_dashboard.get_dashboard_data(search=employee_name, page_length=1)
+		self.assertEqual(result["employees"][0]["shift"], None)
+
+	def test_employee_with_active_shift_resolves_shift_type(self):
+		# Fixture confirmed live on this site while writing this plan (Task 3, Step 2):
+		# Employee 200680 "Christopher Kiplagat Kangogo" has an active Shift Assignment
+		# with shift_type "KR - General Shift".
+		frappe.set_user("teddy@upande.com")
+		result = hr_dashboard.get_dashboard_data(search="Christopher Kiplagat Kangogo", page_length=1)
+		self.assertEqual(len(result["employees"]), 1)
+		self.assertEqual(result["employees"][0]["shift"], "KR - General Shift")
+
+	def test_employee_with_active_holiday_list_assignment_resolves_week_off(self):
+		# Fixture confirmed live on this site while writing this plan (Task 3, Step 2):
+		# Employee 600003 "Kevin Kwemboi Omande" has an active Holiday List Assignment
+		# linked to Holiday List "Tuesday & Wednesday Week Off 2026", weekly_off "Wednesday".
+		frappe.set_user("teddy@upande.com")
+		result = hr_dashboard.get_dashboard_data(search="Kevin Kwemboi Omande", page_length=1)
+		self.assertEqual(len(result["employees"]), 1)
+		self.assertEqual(result["employees"][0]["week_off"], "Wednesday")
