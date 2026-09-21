@@ -142,7 +142,7 @@ def get_dashboard_data(
 		fields=EMPLOYEE_FIELDS,
 		order_by="employee_name asc",
 		start=start,
-		page_length=page_length,
+		limit=page_length,
 	)
 
 	gender_breakdown = frappe.get_list(
