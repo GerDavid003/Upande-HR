@@ -103,8 +103,8 @@ class IntegrationTestHRDashboardShiftAndWeekOff(IntegrationTestCase):
 
 	def test_employee_with_no_active_shift_shows_blank(self):
 		frappe.set_user("teddy@upande.com")
-		employees_with_shifts = frappe.get_all("Shift Assignment", pluck="employee")
-		employees = frappe.get_all(
+		employees_with_shifts = frappe.get_list("Shift Assignment", pluck="employee")
+		employees = frappe.get_list(
 			"Employee",
 			filters={"name": ["not in", employees_with_shifts or ["__none__"]]},
 			limit=1,
