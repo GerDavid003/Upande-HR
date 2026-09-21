@@ -26,7 +26,7 @@
 
 	function statusPill(status) {
 		var cls = "status-" + String(status || "").toLowerCase();
-		return '<span class="pill ' + cls + '">' + esc(status) + "</span>";
+		return '<span class="pill ' + esc(cls) + '">' + esc(status) + "</span>";
 	}
 
 	function apiCall(method, params) {
@@ -121,6 +121,8 @@
 		apiCall("get_dashboard_data", params).then(function (data) {
 			renderKPIs(data.kpis);
 			renderTable(data);
+		}).catch(function(err) {
+			document.getElementById("page-sub").textContent = "Failed to load dashboard data. Please refresh the page.";
 		});
 	}
 
@@ -155,6 +157,8 @@
 			populateSelect(document.getElementById("filter-category"), options.employee_categories, "All categories");
 			populateSelect(document.getElementById("filter-status"), options.statuses, "All statuses");
 			loadData();
+		}).catch(function(err) {
+			document.getElementById("page-sub").textContent = "Failed to load dashboard data. Please refresh the page.";
 		});
 
 		["filter-company", "filter-department", "filter-category"].forEach(function (id) {
