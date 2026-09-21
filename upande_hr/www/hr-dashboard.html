@@ -1,0 +1,75 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+{% raw %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% endraw %}
+<link rel="stylesheet" href="/assets/upande_hr/css/hr-dashboard.css">
+{% raw %}
+<div class="topbar">
+  <a class="topbar__brand" href="/app" title="Back to desk">
+    <img class="topbar__logo" alt="Upande" src="/assets/upande_hr/images/upande-logo.png" onerror="this.style.display='none'"/>
+    <div class="topbar__divider"></div>
+    <div class="topbar__product">HR Dashboard<small>Upande HR</small></div>
+  </a>
+  <div class="topbar__right">
+    <span id="topbar-user">
+{% endraw %}{{ user_email }}{% raw %}
+    </span>
+    <div class="avatar" id="topbar-avatar"></div>
+  </div>
+</div>
+{% endraw %}
+{% if is_hr_manager %}
+{% raw %}
+<div class="page">
+  <div class="pagehead">
+    <div class="pagehead__eyebrow">Upande HR · Employee Roster</div>
+    <h1 class="pagehead__title">HR Dashboard</h1>
+    <p class="pagehead__sub" id="page-sub">Loading…</p>
+  </div>
+
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <div class="filterbar">
+    <select id="filter-company"><option value="">All companies</option></select>
+    <select id="filter-department"><option value="">All departments</option></select>
+    <select id="filter-category"><option value="">All categories</option></select>
+    <select id="filter-status"><option value="">All statuses</option></select>
+    <input type="search" id="filter-search" placeholder="Search name, payroll no, national ID…">
+  </div>
+
+  <div class="card">
+    <div class="tablewrap">
+      <table class="roster">
+        <thead>
+          <tr>
+            <th>Payroll</th><th>Employee Name</th><th>Gender</th><th>Employee Category</th>
+            <th>Employment Type</th><th>Designation</th><th>Department</th><th>Unit/Division</th>
+            <th>Date of Joining</th><th>Status</th><th>Company</th><th>Shift</th><th>Week Off</th>
+            <th>National ID</th><th>Tax ID</th><th>SHA No</th><th>NSSF No</th>
+          </tr>
+        </thead>
+        <tbody id="roster-tbody"></tbody>
+      </table>
+      <div class="empty-state" id="roster-empty" style="display:none">No employees match these filters.</div>
+    </div>
+    <div class="pagination">
+      <span class="pagination__label" id="pagination-label"></span>
+      <button id="pagination-prev">← Prev</button>
+      <button id="pagination-next">Next →</button>
+    </div>
+  </div>
+</div>
+{% endraw %}
+{% else %}
+<div class="access-denied">
+  <h2>Not permitted</h2>
+  <p>The HR Dashboard is restricted to users with the HR Manager role. Contact your administrator if you believe this is a mistake.</p>
+</div>
+{% endif %}
+{% raw %}
+<script src="/assets/upande_hr/js/hr-dashboard.js"></script>
+{% endraw %}
+{% endblock %}
