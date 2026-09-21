@@ -61,3 +61,112 @@ def get_filter_options():
 		),
 		"statuses": STATUS_OPTIONS,
 	}
+
+
+EMPLOYEE_FIELDS = [
+	"name",
+	"employee_number",
+	"employee_name",
+	"gender",
+	"employee_category",
+	"employment_type",
+	"designation",
+	"department",
+	"custom_farm",
+	"date_of_joining",
+	"status",
+	"company",
+	"national_id",
+	"tax_id",
+	"sha_no",
+	"nssf_no",
+]
+
+
+def _build_employee_conditions(company, department, employee_category, status, search):
+	conditions = []
+	_company_conditions(conditions, company)
+	if department:
+		conditions.append(["department", "=", department])
+	if employee_category:
+		conditions.append(["employee_category", "=", employee_category])
+	if status:
+		conditions.append(["status", "=", status])
+
+	or_filters = None
+	if search:
+		term = f"%{search}%"
+		or_filters = [
+			["employee_name", "like", term],
+			["employee_number", "like", term],
+			["national_id", "like", term],
+		]
+	return conditions, or_filters
+
+
+def _count_employees(conditions, or_filters):
+	return len(
+		frappe.get_list(
+			"Employee",
+			filters=conditions,
+			or_filters=or_filters,
+			pluck="name",
+			limit_page_length=0,
+		)
+	)
+
+
+@frappe.whitelist()
+def get_dashboard_data(
+	company=None,
+	department=None,
+	employee_category=None,
+	status=None,
+	search=None,
+	start=0,
+	page_length=50,
+):
+	check_hr_manager()
+	start = int(start)
+	page_length = int(page_length)
+	conditions, or_filters = _build_employee_conditions(
+		company, department, employee_category, status, search
+	)
+
+	total = _count_employees(conditions, or_filters)
+
+	employees = frappe.get_list(
+		"Employee",
+		filters=conditions,
+		or_filters=or_filters,
+		fields=EMPLOYEE_FIELDS,
+		order_by="employee_name asc",
+		start=start,
+		page_length=page_length,
+	)
+
+	gender_breakdown = frappe.get_list(
+		"Employee",
+		filters=conditions,
+		or_filters=or_filters,
+		group_by="gender",
+		# Dict syntax required for aggregates on this Frappe version -- a plain
+		# string like "count(name) as count" raises ValidationError ("SQL
+		# functions are not allowed as strings in SELECT"). Verified directly:
+		# frappe.get_list("Employee", group_by="gender",
+		#   fields=["gender", {"COUNT": "name", "as": "count"}]) returns
+		# [{'gender': 'Female', 'count': 1357}, {'gender': 'Male', 'count': 1251}].
+		fields=["gender", {"COUNT": "name", "as": "count"}],
+		order_by="count desc",
+	)
+
+	kpis = {
+		"total": total,
+		"active": _count_employees(conditions + [["status", "=", "Active"]], or_filters),
+		"left_or_inactive": _count_employees(
+			conditions + [["status", "in", ["Left", "Inactive"]]], or_filters
+		),
+		"gender_breakdown": gender_breakdown,
+	}
+
+	return {"employees": employees, "total": total, "kpis": kpis}
