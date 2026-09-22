@@ -77,6 +77,40 @@ class IntegrationTestHRDashboardData(IntegrationTestCase):
 		breakdown_sum = sum(row["count"] for row in result["kpis"]["gender_breakdown"])
 		self.assertEqual(breakdown_sum, result["total"])
 
+	def test_department_filter_narrows_results(self):
+		frappe.set_user("teddy@upande.com")
+		department = frappe.db.get_value("Employee", {"department": ["!=", ""]}, "department")
+		if not department:
+			self.skipTest("No Employee with a department set on this site.")
+		expected = frappe.db.count("Employee", {"department": department})
+		result = hr_dashboard.get_dashboard_data(department=department, page_length=5)
+		self.assertEqual(result["total"], expected)
+		for employee in result["employees"]:
+			self.assertEqual(employee["department"], department)
+
+	def test_employee_category_filter_narrows_results(self):
+		frappe.set_user("teddy@upande.com")
+		category = frappe.db.get_value("Employee", {"employee_category": ["!=", ""]}, "employee_category")
+		if not category:
+			self.skipTest("No Employee with an employee_category set on this site.")
+		expected = frappe.db.count("Employee", {"employee_category": category})
+		result = hr_dashboard.get_dashboard_data(employee_category=category, page_length=5)
+		self.assertEqual(result["total"], expected)
+		for employee in result["employees"]:
+			self.assertEqual(employee["employee_category"], category)
+
+	def test_non_hr_manager_is_denied_on_dashboard_data(self):
+		user = frappe.get_doc(
+			{
+				"doctype": "User",
+				"email": "no-hr-role-3@example.com",
+				"first_name": "No HR Role 3",
+				"send_welcome_email": 0,
+			}
+		).insert(ignore_permissions=True)
+		frappe.set_user(user.name)
+		self.assertRaises(frappe.PermissionError, hr_dashboard.get_dashboard_data)
+
 
 class IntegrationTestHRDashboardDataCompanyScoping(IntegrationTestCase):
 	def tearDown(self):

@@ -112,7 +112,7 @@ def _count_employees(conditions, or_filters):
 			filters=conditions,
 			or_filters=or_filters,
 			pluck="name",
-			limit_page_length=0,
+			limit=0,
 		)
 	)
 
@@ -212,7 +212,7 @@ def get_dashboard_data(
 		or_filters=or_filters,
 		fields=EMPLOYEE_FIELDS,
 		order_by="employee_name asc",
-		start=start,
+		offset=start,
 		limit=page_length,
 	)
 

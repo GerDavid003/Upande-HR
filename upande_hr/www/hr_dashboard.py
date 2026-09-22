@@ -8,6 +8,7 @@ def get_context(context):
 
 	context.no_cache = 1
 	context.show_sidebar = False
+	context.full_width = True
 	context.is_hr_manager = "HR Manager" in frappe.get_roles()
 	context.user_email = frappe.session.user
 	return context
