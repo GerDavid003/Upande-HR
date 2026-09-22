@@ -165,6 +165,42 @@ fixtures = [
 					# custom_group_name to department, where it belongs. A Check field, so
 					# the Section Break walk above does not apply to it.
 					"Employee-custom_is_hod",
+					# Shift window, anchored on the HRMS-shipped default_shift. Both are
+					# Date fields rather than breaks, so the Section Break walk above does
+					# not apply. shift.py defaults the start date to date_of_joining and
+					# drives the submitted Shift Assignment off this pair.
+					"Employee-custom_shift_start_date",
+					"Employee-custom_shift_end_date",
+					# Probation, its own collapsible section anchored on date_of_joining.
+					# The chain is linear: section -> status -> start -> months -> column
+					# break -> end -> review -> reports_to_user. End and review dates are
+					# computed in probation.py; end stays editable so HR can record an
+					# extension by hand.
+					"Employee-custom_probation_section",
+					"Employee-custom_probation_status",
+					"Employee-custom_probation_start_date",
+					"Employee-custom_probation_period_months",
+					"Employee-custom_probation_col_break",
+					"Employee-custom_probation_end_date",
+					"Employee-custom_probation_review_date",
+					# Hidden, fetched from reports_to.user_id. The Probation Review Due
+					# Notification needs a field that resolves to a User - it cannot follow
+					# a Link-to-Employee and find an email on its own.
+					"Employee-custom_reports_to_user",
+					# Induction. All three are read-only flags written by induction.py;
+					# the evidence lives in the Policy Acknowledgment records, surfaced on
+					# the Connections tab by dashboard.py.
+					"Employee-custom_induction_section",
+					"Employee-custom_induction_session",
+					"Employee-custom_induction_completed",
+					"Employee-custom_policies_acknowledged",
+					# HR Settings tunables. Defaults on a Custom Field only apply to new
+					# records, and HR Settings is a Single that already exists on every
+					# site, so these have to be set by hand after deployment.
+					"HR Settings-custom_upande_hr_section",
+					"HR Settings-custom_auto_create_shift_assignment",
+					"HR Settings-custom_default_probation_months",
+					"HR Settings-custom_probation_review_lead_days",
 				],
 			]
 		],
@@ -293,10 +329,32 @@ doc_events = {
 		# check_leave_record() reassigning status back to "On Leave".
 		"validate": "upande_hr.overrides.attendance.reassert_comp_off_override"
 	},
+	# One "Employee" key only. A Python dict silently keeps the last duplicate, so a
+	# second block here would drop set_years_of_service without any error.
 	"Employee": {
-		# On validate rather than on the nightly job alone, so the figure is right the
-		# moment a joining date is entered or corrected.
-		"validate": "upande_hr.overrides.employee.set_years_of_service"
+		# set_years_of_service runs on validate rather than on the nightly job alone,
+		# so the figure is right the moment a joining date is entered or corrected.
+		# employee_validate resolves default_shift from Default Shift Rule; it runs
+		# before set_probation_dates but the two do not share any field.
+		"validate": [
+			"upande_hr.overrides.employee.set_years_of_service",
+			"upande_hr.upande_hr.shift.employee_validate",
+			"upande_hr.upande_hr.probation.set_probation_dates",
+		],
+		# On on_update rather than validate: the Shift Assignment has to reference a
+		# saved Employee, and the old assignment is cancelled before the new one is
+		# submitted, which cannot happen mid-validate.
+		"on_update": "upande_hr.upande_hr.shift.employee_on_update",
+	},
+	"Induction Session": {
+		"on_submit": "upande_hr.upande_hr.induction.session_on_submit",
+		"on_update_after_submit": "upande_hr.upande_hr.induction.session_on_update_after_submit",
+		"on_cancel": "upande_hr.upande_hr.induction.session_on_cancel",
+	},
+	"Policy Acknowledgment": {
+		"before_submit": "upande_hr.upande_hr.induction.acknowledgment_before_submit",
+		"on_submit": "upande_hr.upande_hr.induction.acknowledgment_on_change",
+		"on_cancel": "upande_hr.upande_hr.induction.acknowledgment_on_change",
 	},
 }
 
@@ -347,13 +405,19 @@ scheduler_events = {
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "upande_hr.event.get_events"
 # }
+
+# Dashboards
+# ------------------------------
 #
-# each overriding function accepts a `data` argument;
-# generated from the base implementation of the doctype dashboard,
-# along with any modifications made in other Frappe apps
-# override_doctype_dashboards = {
-# 	"Task": "upande_hr.task.get_dashboard_data"
-# }
+# Each overriding function accepts a `data` argument generated from the base
+# implementation of the doctype dashboard, along with any modifications made in other
+# Frappe apps. One key per doctype - a duplicate is silently dropped, as with doc_events.
+#
+# Policy Acknowledgment is one row per employee per policy, so it belongs on the
+# Connections tab rather than in a Link field on Employee.
+override_doctype_dashboards = {
+	"Employee": "upande_hr.upande_hr.dashboard.get_employee_dashboard",
+}
 
 # exempt linked doctypes from being automatically cancelled
 #

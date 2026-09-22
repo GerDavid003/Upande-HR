@@ -1,13 +1,6 @@
 [
  {
-  "doctype": "Workflow State",
-  "icon": null,
-  "modified": "2026-09-16 00:00:00",
-  "name": "Open",
-  "style": "",
-  "workflow_state_name": "Open"
- },
- {
+  "docstatus": 0,
   "doctype": "Workflow State",
   "icon": null,
   "modified": "2026-09-16 00:00:00",
@@ -16,6 +9,7 @@
   "workflow_state_name": "Under Investigation"
  },
  {
+  "docstatus": 0,
   "doctype": "Workflow State",
   "icon": null,
   "modified": "2026-09-16 00:00:00",
@@ -24,6 +18,7 @@
   "workflow_state_name": "Hearing Scheduled"
  },
  {
+  "docstatus": 0,
   "doctype": "Workflow State",
   "icon": null,
   "modified": "2026-09-16 00:00:00",
@@ -32,6 +27,7 @@
   "workflow_state_name": "Hearing Held"
  },
  {
+  "docstatus": 0,
   "doctype": "Workflow State",
   "icon": null,
   "modified": "2026-09-16 00:00:00",
@@ -40,6 +36,7 @@
   "workflow_state_name": "Decision"
  },
  {
+  "docstatus": 0,
   "doctype": "Workflow State",
   "icon": null,
   "modified": "2026-09-16 00:00:00",
@@ -48,6 +45,7 @@
   "workflow_state_name": "Appeal Requested"
  },
  {
+  "docstatus": 0,
   "doctype": "Workflow State",
   "icon": null,
   "modified": "2026-09-16 00:00:00",
@@ -56,6 +54,7 @@
   "workflow_state_name": "Appeal Hearing"
  },
  {
+  "docstatus": 0,
   "doctype": "Workflow State",
   "icon": null,
   "modified": "2026-09-16 00:00:00",
