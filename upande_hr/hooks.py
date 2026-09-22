@@ -183,10 +183,6 @@ fixtures = [
 					"Employee-custom_probation_col_break",
 					"Employee-custom_probation_end_date",
 					"Employee-custom_probation_review_date",
-					# Hidden, fetched from reports_to.user_id. The Probation Review Due
-					# Notification needs a field that resolves to a User - it cannot follow
-					# a Link-to-Employee and find an email on its own.
-					"Employee-custom_reports_to_user",
 					# Induction. All three are read-only flags written by induction.py;
 					# the evidence lives in the Policy Acknowledgment records, surfaced on
 					# the Connections tab by dashboard.py.
