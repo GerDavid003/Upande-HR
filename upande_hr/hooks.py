@@ -171,11 +171,11 @@ fixtures = [
 					# drives the submitted Shift Assignment off this pair.
 					"Employee-custom_shift_start_date",
 					"Employee-custom_shift_end_date",
-					# Probation, its own collapsible section anchored on date_of_joining.
-					# The chain is linear: section -> status -> start -> months -> column
-					# break -> end -> review -> reports_to_user. End and review dates are
-					# computed in probation.py; end stays editable so HR can record an
-					# extension by hand.
+					# Probation, its own collapsible section on the Joining tab. Anchored
+					# on final_confirmation_date: column_break_32 follows it, so the
+					# Section Break walk stops there instead of crossing into the next tab.
+					# notice_number_of_days looked safe but is last in its section, and the
+					# walk carried the whole block into Address & Contacts.
 					"Employee-custom_probation_section",
 					"Employee-custom_probation_status",
 					"Employee-custom_probation_start_date",
