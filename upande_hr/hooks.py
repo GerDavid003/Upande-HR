@@ -219,11 +219,7 @@ fixtures = [
 	#
 	# It carries upande_ta and upande_ats fields too. Acceptable on mgp, which serves
 	# one client; do not copy this entry to a shared branch.
-	{
-		"doctype": "Property Setter",
-		"filters": [["name", "in", ["Employee-main-field_order"]]],
-	},
-	{
+		{
 		"doctype": "Workflow",
 		"filters": [
 			["name", "in", ["Extra Shift Compensation Approval", "Disciplinary Case Workflow"]]
