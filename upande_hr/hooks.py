@@ -95,6 +95,10 @@ required_apps = ["upande_ta"]
 # (frappe.scrub) and opens it with "w", so a second {"doctype": "Custom Field"} block
 # would silently overwrite this one on export. New Custom Fields go in the list below.
 #
+# Every item inside the "in" list is a Custom Field NAME, a plain string. A dict here
+# is passed straight into the SQL IN clause and the export dies with a syntax error -
+# fixture entries for other doctypes are siblings of this block, not members of it.
+#
 # The unprefixed statutory fields carried on main (national_id, tax_id, nssf_no, sha_no
 # and custom_column_break_statutory) are deliberately NOT here — they duplicate the
 # custom_-prefixed set below and must not ship to TSH.
@@ -165,6 +169,13 @@ fixtures = [
 					# custom_group_name to department, where it belongs. A Check field, so
 					# the Section Break walk above does not apply to it.
 					"Employee-custom_is_hod",
+					# Two more adopted hand-made Desk fields, kept under their existing
+					# fieldnames so the records already carrying values keep working.
+					# custom_skilllevel is missing an underscore; renaming it would need a
+					# data migration, so it ships as-is. custom_category links to the
+					# Job Category doctype this app now owns.
+					"Employee-custom_skilllevel",
+					"Employee-custom_category",
 					# Shift window, anchored on the HRMS-shipped default_shift. Both are
 					# Date fields rather than breaks, so the Section Break walk above does
 					# not apply. shift.py defaults the start date to date_of_joining and
@@ -183,7 +194,7 @@ fixtures = [
 					"Employee-custom_probation_col_break",
 					"Employee-custom_probation_end_date",
 					"Employee-custom_probation_review_date",
-					# Induction. All three are read-only flags written by induction.py;
+					# Induction. All four are read-only flags written by induction.py;
 					# the evidence lives in the Policy Acknowledgment records, surfaced on
 					# the Connections tab by dashboard.py.
 					"Employee-custom_induction_section",
@@ -200,6 +211,17 @@ fixtures = [
 				],
 			]
 		],
+	},
+	# The whole Employee field order, not just this app's fields. Section Break and
+	# Column Break placement on the standard fields (the Company Details columns, the
+	# Joining tab date order, Statutory Details) cannot be expressed with insert_after
+	# on a Custom Field, so the layout has to ship as this row.
+	#
+	# It carries upande_ta and upande_ats fields too. Acceptable on mgp, which serves
+	# one client; do not copy this entry to a shared branch.
+	{
+		"doctype": "Property Setter",
+		"filters": [["name", "in", ["Employee-main-field_order"]]],
 	},
 	{
 		"doctype": "Workflow",
@@ -249,6 +271,11 @@ fixtures = [
 		],
 	},
 ]
+
+# Job Category permissions are NOT fixtured. They live in the doctype's own JSON at
+# upande_hr/upande_hr/doctype/job_category/job_category.json, which migrate syncs.
+# A Custom DocPerm fixture would override that JSON on every migrate and make the two
+# sources of truth drift.
 
 # Doctype Class Overrides
 # ------------------------
