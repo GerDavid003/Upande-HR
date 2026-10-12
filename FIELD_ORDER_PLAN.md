@@ -3,15 +3,33 @@
 Apply to the `Employee-main-field_order` Property Setter on **Marginpar Staging**
 via MCP. Do not ship it from the app; see the note in `hooks.py`.
 
+Applied and verified on the local site (`marginpar.localhost`) on 2026-10-12. The
+notes below include what that run turned up.
+
 ## Before you apply
 
-1. Deploy this branch and run `bench migrate` first, so all 18 new Employee Custom
-   Fields exist. Frappe ignores field_order entries that don't resolve to a field,
-   but it's cleaner if they all resolve.
-2. Run `get_document("Property Setter", "Employee-main-field_order")` and work on the
-   full current array. Never rebuild it from scratch. The live array has fields from
-   several apps that this repo can't see.
-3. Edit the array only as described below: insert the new fieldnames and move the
+1. **Check for another app shipping an Employee field_order.** upande_agriculture
+   (branch `live`) ships `custom/employee.json` with `sync_on_migrate: 1` and its own
+   `Employee-main-field_order`, a 322-field list from another client. Every
+   `bench migrate` deletes the site's field_order and re-inserts that one, so
+   anything applied here is lost on the next deploy. The fix is on upande_agriculture
+   branch `fix/remove-employee-field-order`
+   (`0001-fix-stop-shipping-the-Employee-field_order-Property-.patch`). If staging
+   runs that app, deploy the fix **before** applying this plan.
+2. Deploy upande_hr and run `bench migrate`, so all 18 new Employee Custom Fields
+   exist.
+3. Read **both** of these:
+   - `get_document("Property Setter", "Employee-main-field_order")`, the stored
+     array.
+   - The rendered field order: `get_doctype_info("Employee")` / `frappe.get_meta`.
+
+   If the stored array has fewer entries than the doctype has fields, work from the
+   **rendered** order instead. The missing fields are only placed by the
+   insert_after fallback. Writing a short array back would leave them there, and
+   they would move whenever the anchors shift. Locally the stored array had 154
+   entries against 191 fields, including non-new ones like `basic_pay`,
+   `union_member` and `custom_greenhouse`. The array written back listed all 191.
+4. Edit the array only as described below: insert the new fieldnames and move the
    existing ones. Do not drop or reorder anything else.
 
 All anchors are fieldnames. "After X" means immediately after X in the array.
@@ -36,9 +54,9 @@ Target sequence in the left column of the Joining section:
 | `custom_contract_start_date` | Date      | `custom_contract_type`       |
 | `contract_end_date`          | (standard, **move**) | `custom_contract_start_date` |
 
-`contract_end_date` already sits directly after `final_confirmation_date` in the
-array, so inserting the two new fields leaves it in place. If it sits anywhere else
-(for example in the right column after `column_break_32`), move it.
+Check where `contract_end_date` actually is. Locally it had been sitting in the right
+column, after `column_break_32`, and needed moving. If it already follows
+`final_confirmation_date`, inserting the two new fields leaves it in the right place.
 
 Full-width Contract History section, directly after the Joining section and before
 Probation:
@@ -69,6 +87,12 @@ Insert this block after the last field of the `emergency_contact_details` sectio
 
 ## 4. New Shift tab, after Attendance & Leaves
 
+Once section 3 is applied, Attendance & Leaves opens directly with
+`attendance_device_id`. That's correct, and no new Section Break is needed: a Tab
+Break always starts its own implicit section in the form layout (`layout.js`
+`make_tab` → `make_section`). The tab only showed the Next of Kin heading because
+the Next of Kin fields were sitting inside it.
+
 **Move** these three existing fields out of the `attendance_and_leave_details`
 section, where they currently follow `holiday_list`:
 `default_shift`, `custom_shift_start_date`, `custom_shift_end_date`.
@@ -85,9 +109,23 @@ Then insert this block after the last field of the Attendance & Leaves tab
 | `custom_shift_end_date`   | Date (**move**)      | `custom_shift_start_date` |
 
 The approvers (`approvers_section`, `expense_approver`, `leave_approver`,
-`shift_request_approver`) stay under Attendance & Leaves. If staging has other
-shift-related fields from upande_ta near `default_shift`, leave them where they are
-unless told otherwise.
+`shift_request_approver`) stay under Attendance & Leaves, in their existing order.
+`holiday_list` also stays, beside Device ID (decided 2026-10-12). If staging has
+other shift-related fields from upande_ta near `default_shift`, leave them where they
+are unless told otherwise.
+
+Resulting sequence locally, from the emergency contact block to the Salary tab:
+
+```
+emergency_contact_details, person_to_be_contacted, column_break_55, emergency_phone_number,
+column_break_19, relation,
+custom_next_of_kin_section, custom_next_of_kin_name, custom_next_of_kin_col_break_1,
+custom_next_of_kin_contact, custom_next_of_kin_col_break_2, custom_next_of_kin_relationship,
+attendance_and_leave_details, attendance_device_id, column_break_44, holiday_list,
+approvers_section, expense_approver, leave_approver, column_break_45, shift_request_approver,
+custom_shift_tab, custom_shift_section, default_shift, custom_shift_start_date, custom_shift_end_date,
+salary_information
+```
 
 ## 5. Personal Details: Beneficiaries and Dependants
 
@@ -109,10 +147,14 @@ Directly after the existing Family Members table and before
 
 ## Check after applying
 
-- `len(new_array) == len(old_array) + 18`. There are 18 new fieldnames, and moves
-  don't change the count. If staging's array already lists any of these fieldnames,
-  adjust the count to match.
-- `set(old_array) <= set(new_array)`: nothing was dropped.
+- If you worked from the rendered order: `len(new_array)` equals the rendered field
+  count, and the rendered count is the same before and after. If you worked from a
+  complete stored array: `len(new_array) == len(old_array) + 18`, since moves don't
+  change the count.
+- `set(old_order) <= set(new_array)`: nothing was dropped.
 - Each fieldname appears exactly once.
 - Clear the cache, reload an Employee, and check that Next of Kin is on Address &
   Contacts and the Shift tab sits between Attendance & Leaves and Salary.
+- Run `bench migrate`, then compare the stored array with what you wrote. If they
+  differ, something is still syncing a field_order (see step 1). Locally, two
+  migrates in a row left it unchanged.
