@@ -4,14 +4,20 @@
 """Employment contracts on the Employee record.
 
 The current contract is Contract Type + Contract Start Date + the standard
-contract_end_date. Every contract the employee has held is kept in the read-only
+contract_end_date. Every contract the employee has held is kept in the
 Contract History table, keyed on its start date:
 
 - same start date  -> the same contract. An extension or a correction updates that row.
 - new start date   -> a new contract. A row is appended and the old one stays as it was.
 
-So correcting a mistyped start date leaves the mistyped row behind. The grid is
-deliberately read-only in the UI, so removing that row is a data fix (API or console).
+So correcting a mistyped start date leaves the mistyped row behind for an HR Manager
+to delete. The table is at permlevel 2: HR Manager can add, correct or delete rows by
+hand, HR User only reads it.
+
+The upsert below still works when an HR User saves. Document.save() and insert() call
+validate_higher_perm_levels() - which restores fields the user cannot write from the
+database - before run_before_save_methods(), which is where this validate hook runs.
+So the reset happens first and the row appended here is not wiped by it.
 """
 
 import frappe

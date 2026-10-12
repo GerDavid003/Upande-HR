@@ -8,3 +8,4 @@ upande_hr.patches.v1_0.seed_grievance_types
 upande_hr.patches.v1_0.add_talent_pool_permlevel
 upande_hr.patches.v1_0.seed_separation_types
 upande_hr.patches.v1_0.backfill_contract_history
+upande_hr.patches.v1_0.add_contract_history_permlevel

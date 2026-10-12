@@ -232,7 +232,9 @@ fixtures = [
 					# Contract, Joining tab. The end date is the standard contract_end_date.
 					# The history section is anchored on date_of_retirement, which is
 					# followed by custom_probation_section, so the walk stops at once.
-					# custom_contract_history is read-only and written by contract.py.
+					# custom_contract_history is kept in step by contract.py and is at
+					# permlevel 2 - HR Manager edits it, HR User reads it. The DocPerm rows
+					# come from patches.v1_0.add_contract_history_permlevel.
 					"Employee-custom_contract_type",
 					"Employee-custom_contract_start_date",
 					"Employee-custom_contract_history_section",
