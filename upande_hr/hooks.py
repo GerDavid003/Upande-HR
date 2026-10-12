@@ -46,7 +46,7 @@ required_apps = ["upande_ta"]
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {"Employee": "public/js/employee.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -208,18 +208,56 @@ fixtures = [
 					"HR Settings-custom_auto_create_shift_assignment",
 					"HR Settings-custom_default_probation_months",
 					"HR Settings-custom_probation_review_lead_days",
+					# Age, read-only. employee_details.py sets it on validate and the
+					# nightly refresh_ages keeps it current across birthdays.
+					"Employee-custom_age",
+					# Exit tab, next to the relabelled resignation_letter_date.
+					"Employee-custom_separation_type",
+					# Beneficiaries and Dependants, chained on Family Members so they stay
+					# in the Personal Details tab. Every anchor after the first is a Custom
+					# Field, so the Section Break walk does not apply.
+					"Employee-custom_beneficiaries_section",
+					"Employee-custom_beneficiaries",
+					"Employee-custom_dependants_section",
+					"Employee-custom_dependants",
+					# Next of Kin, laid out like Emergency Contact. relation is the last
+					# field on its tab, so the Section Break walk carries this section into
+					# Attendance & Leaves until FIELD_ORDER_PLAN.md is applied on the site.
+					"Employee-custom_next_of_kin_section",
+					"Employee-custom_next_of_kin_name",
+					"Employee-custom_next_of_kin_col_break_1",
+					"Employee-custom_next_of_kin_contact",
+					"Employee-custom_next_of_kin_col_break_2",
+					"Employee-custom_next_of_kin_relationship",
+					# Contract, Joining tab. The end date is the standard contract_end_date.
+					# The history section is anchored on date_of_retirement, which is
+					# followed by custom_probation_section, so the walk stops at once.
+					# custom_contract_history is read-only and written by contract.py.
+					"Employee-custom_contract_type",
+					"Employee-custom_contract_start_date",
+					"Employee-custom_contract_history_section",
+					"Employee-custom_contract_history",
+					# Shift tab. A Tab Break walks to the end of the current tab, so this
+					# lands after Attendance & Leaves. Moving default_shift and the shift
+					# dates into it is a field_order change - see FIELD_ORDER_PLAN.md.
+					"Employee-custom_shift_tab",
+					"Employee-custom_shift_section",
+					# Read by contract.notify_expiring_contracts. Set by hand on existing
+					# sites, like the other HR Settings tunables above.
+					"HR Settings-custom_contract_expiry_lead_days",
 				],
 			]
 		],
 	},
-	# The whole Employee field order, not just this app's fields. Section Break and
-	# Column Break placement on the standard fields (the Company Details columns, the
-	# Joining tab date order, Statutory Details) cannot be expressed with insert_after
-	# on a Custom Field, so the layout has to ship as this row.
-	#
-	# It carries upande_ta and upande_ats fields too. Acceptable on mgp, which serves
-	# one client; do not copy this entry to a shared branch.
-		{
+	# Named Property Setters only. Never Employee-main-field_order: the site's Employee
+	# carries fields from several apps, and a shipped field_order drops every field it
+	# does not list. Layout changes are applied on the site instead - see
+	# FIELD_ORDER_PLAN.md.
+	{
+		"doctype": "Property Setter",
+		"filters": [["name", "in", ["Employee-resignation_letter_date-label"]]],
+	},
+	{
 		"doctype": "Workflow",
 		"filters": [
 			["name", "in", ["Extra Shift Compensation Approval", "Disciplinary Case Workflow"]]
@@ -359,6 +397,10 @@ doc_events = {
 			"upande_hr.overrides.employee.set_years_of_service",
 			"upande_hr.upande_hr.shift.employee_validate",
 			"upande_hr.upande_hr.probation.set_probation_dates",
+			# Age and the beneficiary allocation check.
+			"upande_hr.upande_hr.employee_details.employee_validate",
+			# Contract History upsert, keyed on custom_contract_start_date.
+			"upande_hr.upande_hr.contract.employee_validate",
 		],
 		# On on_update rather than validate: the Shift Assignment has to reference a
 		# saved Employee, and the old assignment is cancelled before the new one is
@@ -384,6 +426,8 @@ scheduler_events = {
 	"daily": [
 		"upande_hr.upande_hr.doctype.disciplinary_warning.disciplinary_warning.lapse_expired_warnings",
 		"upande_hr.overrides.employee.refresh_years_of_service",
+		"upande_hr.upande_hr.employee_details.refresh_ages",
+		"upande_hr.upande_hr.contract.notify_expiring_contracts",
 	]
 }
 

@@ -1,0 +1,61 @@
+{
+ "actions": [],
+ "creation": "2026-10-12 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "dependant_name",
+  "relationship",
+  "gender",
+  "date_of_birth",
+  "id_or_birth_cert_no"
+ ],
+ "fields": [
+  {
+   "fieldname": "dependant_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Dependant Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "relationship",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Relationship",
+   "options": "Spouse\nChild\nParent\nSibling\nOther"
+  },
+  {
+   "fieldname": "gender",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Gender",
+   "options": "Gender"
+  },
+  {
+   "fieldname": "date_of_birth",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date of Birth"
+  },
+  {
+   "fieldname": "id_or_birth_cert_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "ID / Birth Certificate No"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-12 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Upande Hr",
+ "name": "Employee Dependant",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
