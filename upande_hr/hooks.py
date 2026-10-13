@@ -247,6 +247,13 @@ fixtures = [
 					# Read by contract.notify_expiring_contracts. Set by hand on existing
 					# sites, like the other HR Settings tunables above.
 					"HR Settings-custom_contract_expiry_lead_days",
+					# Unit and Block, Company Details. Unit is this app's own doctype.
+					# custom_block links to Block from upande_propagation, and the pair is
+					# anchored on custom_greenhouse from upande_agriculture - neither app is
+					# in required_apps. Fine on mgp, which serves Marginpar only, where
+					# both are installed. Do not carry these two to a shared branch.
+					"Employee-custom_unit",
+					"Employee-custom_block",
 				],
 			]
 		],

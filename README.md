@@ -2,6 +2,18 @@
 
 HR customisations for Upande
 
+### Dependencies outside required_apps (mgp branch only)
+
+These Employee Custom Fields assume apps this app does not declare. That's fine on
+`mgp`, which serves Marginpar only, but don't merge them into a shared branch:
+
+- `Employee-custom_block` links to **Block**, a doctype owned by `upande_propagation`.
+  Without that app the fixture still imports, because Frappe skips the link-target
+  check during fixture sync, but the field links to a doctype that doesn't exist and
+  breaks on use.
+- `Employee-custom_unit` and `Employee-custom_block` are anchored on
+  `custom_greenhouse`, an Employee field shipped by `upande_agriculture`.
+
 ### Installation
 
 You can install this app using the [bench](https://github.com/frappe/bench) CLI:

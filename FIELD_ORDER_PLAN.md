@@ -29,6 +29,14 @@ notes below include what that run turned up.
    they would move whenever the anchors shift. Locally the stored array had 154
    entries against 191 fields, including non-new ones like `basic_pay`,
    `union_member` and `custom_greenhouse`. The array written back listed all 191.
+
+   **Pitfall:** the rendered position of a field that's missing from the stored
+   array is only as good as its insert_after anchor. `custom_greenhouse`
+   (upande_agriculture) is anchored on `custom_location`, which doesn't exist on
+   Marginpar, so it renders at the very end of the form, after `connections_tab`.
+   Copying that position into the array pins it there, which is what happened
+   locally the first time. Before writing, check every field that renders after
+   `connections_tab` and put it back where it belongs (see section 7).
 4. Edit the array only as described below: insert the new fieldnames and move the
    existing ones. Do not drop or reorder anything else.
 
@@ -145,16 +153,38 @@ Directly after the existing Family Members table and before
 |--------------------------|------|---------------------------|
 | `custom_separation_type` | Link | `resignation_letter_date` (now labelled "Separation Date") |
 
+## 7. Company Details: Unit and Block (added 2026-10-13)
+
+| Fieldname           | Type          | Place after         |
+|---------------------|---------------|---------------------|
+| `custom_greenhouse` | (existing, **move only if misplaced**) | `custom_category` |
+| `custom_unit`       | Link → Unit   | `custom_greenhouse` |
+| `custom_block`      | Link → Block  | `custom_unit`       |
+
+Target, in the left column of Company Details:
+
+```
+... reports_to, custom_skilllevel, custom_category, custom_greenhouse, custom_unit, custom_block, column_break_18, ...
+```
+
+This was the site's original Greenhouse position before the local rebuild. If
+staging already has `custom_greenhouse` in Company Details and its stored array is
+complete, the two new fields land after it through insert_after, and adding them to
+the array just makes that explicit. That adds 2 to the count check below.
+
 ## Check after applying
 
 - If you worked from the rendered order: `len(new_array)` equals the rendered field
   count, and the rendered count is the same before and after. If you worked from a
-  complete stored array: `len(new_array) == len(old_array) + 18`, since moves don't
-  change the count.
+  complete stored array: `len(new_array) == len(old_array) + 20` (18 from the form
+  feedback, plus `custom_unit` and `custom_block`), since moves don't change the
+  count.
 - `set(old_order) <= set(new_array)`: nothing was dropped.
 - Each fieldname appears exactly once.
 - Clear the cache, reload an Employee, and check that Next of Kin is on Address &
-  Contacts and the Shift tab sits between Attendance & Leaves and Salary.
+  Contacts, the Shift tab sits between Attendance & Leaves and Salary, and Unit and
+  Block are in Company Details.
+- Nothing renders after `connections_tab`.
 - Run `bench migrate`, then compare the stored array with what you wrote. If they
   differ, something is still syncing a field_order (see step 1). Locally, two
   migrates in a row left it unchanged.
