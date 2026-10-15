@@ -1,0 +1,48 @@
+[
+ {
+  "add_total_row": 0,
+  "add_translate_data": 0,
+  "columns": [],
+  "disable_prepared_report_automation": 0,
+  "disabled": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "filters": [],
+  "is_standard": "No",
+  "javascript": null,
+  "json": "",
+  "letter_head": "Company Letterhead - Grey",
+  "modified": "2026-10-08 12:36:52.507142",
+  "module": "HR",
+  "name": "Appraisal Status",
+  "prepared_report": 0,
+  "query": "SELECT\n  employee_name AS \"Employee:Data:230\",\n  appraisal_cycle AS \"Appraisal Cycle:Link/Appraisal Cycle:200\",\n  workflow_state AS \"Workflow State:Data:200\",\n  final_score AS \"Final Score:Float:120\",\n  name AS \"Open:Link/Appraisal:150\"\nFROM `tabAppraisal`\nORDER BY appraisal_cycle, workflow_state, employee_name",
+  "ref_doctype": "Appraisal",
+  "reference_report": null,
+  "report_name": "Appraisal Status",
+  "report_script": null,
+  "report_type": "Query Report",
+  "roles": [
+   {
+    "parent": "Appraisal Status",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "HR Manager"
+   },
+   {
+    "parent": "Appraisal Status",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "HR User"
+   },
+   {
+    "parent": "Appraisal Status",
+    "parentfield": "roles",
+    "parenttype": "Report",
+    "role": "System Manager"
+   }
+  ],
+  "snapshot_report": 0,
+  "timeout": 0
+ }
+]

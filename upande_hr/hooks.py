@@ -46,7 +46,7 @@ required_apps = ["upande_ta"]
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {"Leave Application": "public/js/leave_application.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -165,6 +165,31 @@ fixtures = [
 					# custom_group_name to department, where it belongs. A Check field, so
 					# the Section Break walk above does not apply to it.
 					"Employee-custom_is_hod",
+					# Employee Details Update. custom_details_confirmed_on takes
+					# custom_ethnicity's slot in the chain above and Family Members is
+					# re-anchored onto it, keeping the chain one dependant per anchor.
+					"Employee-custom_details_confirmed_on",
+					"Employee-custom_alt_phone",
+					"Employee-custom_mpesa_number",
+					# Residence, a Section Break on the last standard field of Address, so
+					# the walk stops at emergency_contact_details and it lands in between.
+					"Employee-custom_residence_section",
+					"Employee-custom_estate_village",
+					"Employee-custom_nearest_town",
+					"Employee-custom_landmark",
+					"Employee-custom_column_break_residence",
+					"Employee-custom_county",
+					"Employee-custom_sub_county",
+					"Employee-custom_postal_address",
+					# Absent -> Annual Leave deduction and attendance labels, on an Upande
+					# tab at the end of HR Settings.
+					"HR Settings-custom_upande_tab",
+					"HR Settings-custom_absent_deduction_section",
+					"HR Settings-custom_enable_absent_al_deduction",
+					"HR Settings-custom_attendance_labels_section",
+					"HR Settings-custom_attendance_label_map",
+					"Leave Application-custom_auto_deducted",
+					"Attendance-custom_attendance_label",
 				],
 			]
 		],
@@ -172,13 +197,23 @@ fixtures = [
 	{
 		"doctype": "Workflow",
 		"filters": [
-			["name", "in", ["Extra Shift Compensation Approval", "Disciplinary Case Workflow"]]
+			[
+				"name",
+				"in",
+				[
+					"Extra Shift Compensation Approval",
+					"Disciplinary Case Workflow",
+					"Employee Details Update Approval",
+					"Charge Sheet Workflow",
+				],
+			]
 		],
 	},
 	# The Disciplinary Case workflow references states and actions that do not ship with
 	# Frappe, and a Workflow fixture does not pull its masters along. Without these two
 	# the workflow imports against rows that do not exist and the transitions never bind.
-	# "Open" is a stock Workflow State and is deliberately not re-shipped.
+	# "Open" is a stock Workflow State and is deliberately not re-shipped. "Draft" is not
+	# stock - Frappe ships only Pending, Approved and Rejected - so it ships here.
 	{
 		"doctype": "Workflow State",
 		"filters": [
@@ -193,6 +228,10 @@ fixtures = [
 					"Appeal Requested",
 					"Appeal Hearing",
 					"Closed",
+					"Draft",
+					"Pending HR Review",
+					"Pending Employee Acknowledgement",
+					"Pending PD Review",
 				],
 			]
 		],
@@ -212,10 +251,22 @@ fixtures = [
 					"Close Case",
 					"Request Appeal",
 					"Schedule Appeal Hearing",
+					"Submit",
+					"Submit for HR Review",
+					"Send to Employee",
+					"Acknowledge",
+					"Send Back",
+					"Sign & Close",
 				],
 			]
 		],
 	},
+	# Charge Sheet Workflow transitions are allowed to these. fixtures/role.json sorts
+	# before workflow.json, and sync_fixtures imports in sorted order, so they exist first.
+	{"doctype": "Role", "filters": [["name", "in", ["People Development", "Finance Controller"]]]},
+	# A UI-made Query Report. "Appraisal Overview" is NOT here: that name is the stock
+	# HRMS report, and the TSH version ships as code, as TSH Appraisal Overview.
+	{"doctype": "Report", "filters": [["name", "in", ["Appraisal Status"]]]},
 ]
 
 # Doctype Class Overrides
@@ -278,10 +329,15 @@ before_uninstall = "upande_hr.install.before_uninstall"
 # System Manager. The query condition scopes list and report views; has_permission
 # closes the direct-link route that a Permission Query alone leaves open.
 permission_query_conditions = {
-	"Employee Grievance": "upande_hr.overrides.employee_grievance.get_permission_query_conditions"
+	"Employee Grievance": "upande_hr.overrides.employee_grievance.get_permission_query_conditions",
+	# Employees see only the charge sheets raised against them.
+	"Charge Sheet": "upande_hr.upande_hr.doctype.charge_sheet.charge_sheet.get_permission_query_conditions",
 }
 
-has_permission = {"Employee Grievance": "upande_hr.overrides.employee_grievance.has_permission"}
+has_permission = {
+	"Employee Grievance": "upande_hr.overrides.employee_grievance.has_permission",
+	"Charge Sheet": "upande_hr.upande_hr.doctype.charge_sheet.charge_sheet.has_permission",
+}
 
 # Document Events
 # ---------------
@@ -298,6 +354,16 @@ doc_events = {
 		# moment a joining date is entered or corrected.
 		"validate": "upande_hr.overrides.employee.set_years_of_service"
 	},
+	"Leave Application": {
+		# No leave until this year's personal details are confirmed. A hook rather than a
+		# Server Script so it ships with the app and does not need server_script_enabled.
+		"before_insert": "upande_hr.upande_hr.doctype.employee_details_update.employee_details_update.gate_leave_application"
+	},
+	"Attendance Request": {
+		# on_submit is the Approved transition; HRMS has created the Attendance by then.
+		"on_submit": "upande_hr.attendance.labels.apply_attendance_label",
+		"on_cancel": "upande_hr.attendance.labels.clear_attendance_label",
+	},
 }
 
 # Scheduled Tasks
@@ -307,7 +373,12 @@ scheduler_events = {
 	"daily": [
 		"upande_hr.upande_hr.doctype.disciplinary_warning.disciplinary_warning.lapse_expired_warnings",
 		"upande_hr.overrides.employee.refresh_years_of_service",
-	]
+	],
+	"cron": {
+		# Sunday 23:59 - closes out the Monday-Sunday week. Gated on
+		# HR Settings.custom_enable_absent_al_deduction inside the job.
+		"59 23 * * 0": ["upande_hr.attendance.absent_deduction.run_weekly"],
+	},
 }
 
 # scheduler_events = {

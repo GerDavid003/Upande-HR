@@ -1,5 +1,6 @@
 import frappe
 
+from upande_hr.setup.charge_sheet import ensure_charge_sheet_component
 from upande_hr.setup.grievance_types import seed_grievance_types
 from upande_hr.setup.workspace import add_case_management_card
 
@@ -7,10 +8,12 @@ from upande_hr.setup.workspace import add_case_management_card
 def after_install():
 	seed_grievance_types()
 	add_case_management_card()
+	ensure_charge_sheet_component()
 
 
 def after_migrate():
 	add_case_management_card()
+	ensure_charge_sheet_component()
 
 
 def before_uninstall():

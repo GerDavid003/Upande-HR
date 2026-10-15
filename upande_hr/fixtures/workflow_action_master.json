@@ -46,5 +46,41 @@
   "modified": "2026-09-16 00:00:00",
   "name": "Schedule Appeal Hearing",
   "workflow_action_name": "Schedule Appeal Hearing"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-10-15 00:00:00",
+  "name": "Submit",
+  "workflow_action_name": "Submit"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-10-15 00:00:00",
+  "name": "Submit for HR Review",
+  "workflow_action_name": "Submit for HR Review"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-10-15 00:00:00",
+  "name": "Send to Employee",
+  "workflow_action_name": "Send to Employee"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-10-15 00:00:00",
+  "name": "Acknowledge",
+  "workflow_action_name": "Acknowledge"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-10-15 00:00:00",
+  "name": "Send Back",
+  "workflow_action_name": "Send Back"
+ },
+ {
+  "doctype": "Workflow Action Master",
+  "modified": "2026-10-15 00:00:00",
+  "name": "Sign & Close",
+  "workflow_action_name": "Sign & Close"
  }
 ]

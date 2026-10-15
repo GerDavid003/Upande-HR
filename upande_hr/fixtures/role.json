@@ -1,0 +1,22 @@
+[
+ {
+  "desk_access": 1,
+  "disabled": 0,
+  "doctype": "Role",
+  "is_custom": 0,
+  "modified": "2026-10-15 00:00:00",
+  "name": "People Development",
+  "role_name": "People Development",
+  "two_factor_auth": 0
+ },
+ {
+  "desk_access": 1,
+  "disabled": 0,
+  "doctype": "Role",
+  "is_custom": 0,
+  "modified": "2026-10-15 00:00:00",
+  "name": "Finance Controller",
+  "role_name": "Finance Controller",
+  "two_factor_auth": 0
+ }
+]

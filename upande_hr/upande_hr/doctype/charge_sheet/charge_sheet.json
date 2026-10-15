@@ -1,0 +1,332 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-10-15 00:00:00",
+ "default_print_format": "Charge Sheet",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "employee",
+  "employee_name",
+  "payroll_number",
+  "department",
+  "employee_user",
+  "company",
+  "currency",
+  "column_break_header",
+  "issued_by",
+  "issued_by_name",
+  "department_of_issuer",
+  "incident_section",
+  "incident_date",
+  "nature_of_incident",
+  "column_break_incident",
+  "amount",
+  "reason",
+  "deduction_section",
+  "deductions",
+  "signatures_section",
+  "manager_signature_date",
+  "employee_signature_date",
+  "column_break_sign",
+  "pd_recommendation",
+  "pd_signature_date",
+  "fc_signature_date",
+  "workflow_state",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "HR-CS-.YYYY.-.#####",
+   "default": "HR-CS-.YYYY.-.#####",
+   "hidden": 1,
+   "reqd": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "fetch_from": "employee.employee_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "payroll_number",
+   "fieldtype": "Data",
+   "label": "Payroll Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "fetch_from": "employee.department",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "employee_user",
+   "fieldtype": "Link",
+   "label": "Employee User",
+   "options": "User",
+   "fetch_from": "employee.user_id",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "fetch_from": "employee.company",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "fetch_from": "company.default_currency",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "column_break_header",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "issued_by",
+   "fieldtype": "Link",
+   "label": "Issued By",
+   "options": "Employee",
+   "reqd": 1,
+   "ignore_user_permissions": 1,
+   "description": "HOD or Manager raising the charge sheet."
+  },
+  {
+   "fieldname": "issued_by_name",
+   "fieldtype": "Data",
+   "label": "Issued By Name",
+   "fetch_from": "issued_by.employee_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "department_of_issuer",
+   "fieldtype": "Link",
+   "label": "Department of Issuer",
+   "options": "Department",
+   "fetch_from": "issued_by.department",
+   "read_only": 1
+  },
+  {
+   "fieldname": "incident_section",
+   "fieldtype": "Section Break",
+   "label": "Incident"
+  },
+  {
+   "fieldname": "incident_date",
+   "fieldtype": "Date",
+   "label": "Incident Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "nature_of_incident",
+   "fieldtype": "Select",
+   "label": "Nature of Incident",
+   "options": "\nLost\nBroken\nMisplaced\nUnder Charged",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_incident",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount to Recover",
+   "options": "currency",
+   "reqd": 1,
+   "non_negative": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "reqd": 1,
+   "description": "Items lost, broken, misplaced or under-charged."
+  },
+  {
+   "fieldname": "deduction_section",
+   "fieldtype": "Section Break",
+   "label": "Deduction Schedule"
+  },
+  {
+   "fieldname": "deductions",
+   "fieldtype": "Table",
+   "label": "Deductions",
+   "options": "Charge Sheet Deduction",
+   "reqd": 1
+  },
+  {
+   "fieldname": "signatures_section",
+   "fieldtype": "Section Break",
+   "label": "Acknowledgement & Approval",
+   "description": "Dates are stamped automatically as the sheet moves through each step."
+  },
+  {
+   "fieldname": "manager_signature_date",
+   "fieldtype": "Date",
+   "label": "Manager Signed On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "employee_signature_date",
+   "fieldtype": "Date",
+   "label": "Employee Acknowledged On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_sign",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pd_recommendation",
+   "fieldtype": "Small Text",
+   "label": "People Development Recommendation"
+  },
+  {
+   "fieldname": "pd_signature_date",
+   "fieldtype": "Date",
+   "label": "People Development Signed On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "fc_signature_date",
+   "fieldtype": "Date",
+   "label": "Finance Controller Signed On",
+   "read_only": 1,
+   "no_copy": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "workflow_state",
+   "fieldtype": "Link",
+   "label": "Workflow State",
+   "options": "Workflow State",
+   "hidden": 1,
+   "no_copy": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Charge Sheet",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-15 12:00:00",
+ "modified_by": "Administrator",
+ "module": "Upande Hr",
+ "name": "Charge Sheet",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "HOD",
+   "read": 1,
+   "create": 1,
+   "write": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Employee",
+   "read": 1,
+   "write": 1,
+   "print": 1
+  },
+  {
+   "role": "People Development",
+   "read": 1,
+   "write": 1,
+   "submit": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Finance Controller",
+   "read": 1,
+   "write": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "HR Manager",
+   "read": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "export": 1,
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "System Manager",
+   "read": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "export": 1,
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  }
+ ],
+ "search_fields": "employee_name",
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "employee_name",
+ "track_changes": 1
+}
