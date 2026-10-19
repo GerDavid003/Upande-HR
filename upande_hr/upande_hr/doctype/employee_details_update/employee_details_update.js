@@ -17,7 +17,7 @@ frappe.ui.form.on("Employee Details Update", {
 			.call(`${EDU_METHOD}.get_current_details`, { employee: frm.doc.employee })
 			.then((r) => {
 				const details = r.message || {};
-				for (const table of ["next_of_kin", "family_members"]) {
+				for (const table of ["emergency_contacts", "next_of_kin", "family_members"]) {
 					frm.clear_table(table);
 					(details[table] || []).forEach((row) => frm.add_child(table, row));
 					delete details[table];

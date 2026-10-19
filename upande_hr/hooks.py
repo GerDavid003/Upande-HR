@@ -181,6 +181,10 @@ fixtures = [
 					"Employee-custom_county",
 					"Employee-custom_sub_county",
 					"Employee-custom_postal_address",
+					# Replaces the three single-contact standard fields, hidden by the
+					# Property Setters below. A Table, not a break, so anchoring on the
+					# standard relation field keeps it inside Emergency Contact.
+					"Employee-custom_emergency_contacts",
 					# Absent -> Annual Leave deduction and attendance labels, on an Upande
 					# tab at the end of HR Settings.
 					"HR Settings-custom_upande_tab",
@@ -264,6 +268,25 @@ fixtures = [
 	# Charge Sheet Workflow transitions are allowed to these. fixtures/role.json sorts
 	# before workflow.json, and sync_fixtures imports in sorted order, so they exist first.
 	{"doctype": "Role", "filters": [["name", "in", ["People Development", "Finance Controller"]]]},
+	# Hide Employee's standard single emergency contact in favour of
+	# custom_emergency_contacts. The column breaks go too, so the table spans the section.
+	# Existing values are moved into the table by patches.v1_0.move_emergency_contacts.
+	{
+		"doctype": "Property Setter",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Employee-person_to_be_contacted-hidden",
+					"Employee-column_break_55-hidden",
+					"Employee-emergency_phone_number-hidden",
+					"Employee-column_break_19-hidden",
+					"Employee-relation-hidden",
+				],
+			]
+		],
+	},
 	# A UI-made Query Report. "Appraisal Overview" is NOT here: that name is the stock
 	# HRMS report, and ours ships as code, as Custom Appraisal Overview.
 	{"doctype": "Report", "filters": [["name", "in", ["Appraisal Status"]]]},

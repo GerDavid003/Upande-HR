@@ -13,6 +13,9 @@ the Employee. validate() flags bank_details_changed when they differ from the Em
 and the "Employee Details Update Approval" Workflow routes a flagged form through
 Pending HR Review instead of letting the employee submit it straight to Approved.
 
+Emergency Contacts are copied into Employee.custom_emergency_contacts, which replaces the
+standard single-contact fields.
+
 Next of Kin is copied into Employee.custom_next_of_kin, an upande_ats field. upande_hr
 does not declare upande_ats in required_apps, so the form carries its own child table and
 the copy is skipped when the field is not on the site.
@@ -26,6 +29,7 @@ from frappe.utils import cstr, flt, getdate, today
 CONFIRMED_ON = "custom_details_confirmed_on"
 EMPLOYEE_NOK_FIELD = "custom_next_of_kin"
 EMPLOYEE_FAMILY_FIELD = "custom_family_members"
+EMPLOYEE_EC_FIELD = "custom_emergency_contacts"
 
 # form field -> Employee field
 FIELD_MAP = {
@@ -56,6 +60,7 @@ FIELD_MAP = {
 BANK_FIELDS = ("bank_name", "bank_ac_no", "mpesa_number")
 NOK_FIELDS = ("full_name", "relationship", "national_id_no", "phone_no", "allocation_percentage")
 FAMILY_FIELDS = ("full_name", "relationship", "id_number")
+EC_FIELDS = ("contact_name", "relationship", "phone")
 
 
 class EmployeeDetailsUpdate(Document):
@@ -120,6 +125,10 @@ class EmployeeDetailsUpdate(Document):
 			if employee.meta.has_field(target):
 				employee.set(target, self.get(source))
 
+		if employee.meta.has_field(EMPLOYEE_EC_FIELD):
+			employee.set(
+				EMPLOYEE_EC_FIELD, [{f: row.get(f) for f in EC_FIELDS} for row in self.emergency_contacts]
+			)
 		if employee.meta.has_field(EMPLOYEE_NOK_FIELD):
 			employee.set(
 				EMPLOYEE_NOK_FIELD, [{f: row.get(f) for f in NOK_FIELDS} for row in self.next_of_kin]
@@ -147,6 +156,8 @@ def get_current_details(employee: str) -> dict:
 
 	doc = frappe.get_doc("Employee", employee)
 	out = {source: doc.get(target) for source, target in FIELD_MAP.items() if doc.meta.has_field(target)}
+	if doc.meta.has_field(EMPLOYEE_EC_FIELD):
+		out["emergency_contacts"] = [{f: row.get(f) for f in EC_FIELDS} for row in doc.get(EMPLOYEE_EC_FIELD)]
 	if doc.meta.has_field(EMPLOYEE_NOK_FIELD):
 		out["next_of_kin"] = [{f: row.get(f) for f in NOK_FIELDS} for row in doc.get(EMPLOYEE_NOK_FIELD)]
 	if doc.meta.has_field(EMPLOYEE_FAMILY_FIELD):
