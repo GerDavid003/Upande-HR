@@ -265,7 +265,7 @@ fixtures = [
 	# before workflow.json, and sync_fixtures imports in sorted order, so they exist first.
 	{"doctype": "Role", "filters": [["name", "in", ["People Development", "Finance Controller"]]]},
 	# A UI-made Query Report. "Appraisal Overview" is NOT here: that name is the stock
-	# HRMS report, and the TSH version ships as code, as TSH Appraisal Overview.
+	# HRMS report, and ours ships as code, as Custom Appraisal Overview.
 	{"doctype": "Report", "filters": [["name", "in", ["Appraisal Status"]]]},
 ]
 

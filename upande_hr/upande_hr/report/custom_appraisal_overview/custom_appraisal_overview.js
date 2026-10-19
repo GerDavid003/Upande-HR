@@ -1,7 +1,7 @@
 // Copyright (c) 2026, Upande and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["TSH Appraisal Overview"] = {
+frappe.query_reports["Custom Appraisal Overview"] = {
 	filters: [
 		{
 			fieldname: "appraisal_cycle",

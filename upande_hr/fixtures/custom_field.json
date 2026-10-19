@@ -1375,7 +1375,7 @@
   "columns": 0,
   "default": null,
   "depends_on": null,
-  "description": "Approved Attendance Requests whose reason contains a keyword are shown with its label in the TSH Monthly Attendance Sheet.",
+  "description": "Approved Attendance Requests whose reason contains a keyword are shown with its label in the Custom Monthly Attendance Sheet.",
   "docstatus": 0,
   "doctype": "Custom Field",
   "dt": "HR Settings",

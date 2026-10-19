@@ -61,6 +61,7 @@ FAMILY_FIELDS = ("full_name", "relationship", "id_number")
 class EmployeeDetailsUpdate(Document):
 	def validate(self):
 		self.validate_own_record()
+		self.validate_emergency_contacts()
 		self.validate_next_of_kin()
 		self.bank_details_changed = int(self.has_bank_change())
 
@@ -71,6 +72,10 @@ class EmployeeDetailsUpdate(Document):
 		own = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
 		if self.employee != own:
 			frappe.throw(_("You can only update your own personal details."), frappe.PermissionError)
+
+	def validate_emergency_contacts(self):
+		if not self.emergency_contacts:
+			frappe.throw(_("Please add at least one Emergency Contact."))
 
 	def validate_next_of_kin(self):
 		# Mirrors the "Employee - Next of Kin Allocation Check" Server Script on Employee,

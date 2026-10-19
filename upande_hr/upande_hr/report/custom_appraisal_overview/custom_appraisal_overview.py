@@ -1,9 +1,9 @@
 # Copyright (c) 2026, Upande and contributors
 # For license information, please see license.txt
 
-"""TSH Appraisal Overview - brand (Marafiki) and KPI scores side by side.
+"""Custom Appraisal Overview - brand (Marafiki) and KPI scores side by side.
 
-Named "TSH Appraisal Overview" because "Appraisal Overview" is a standard HRMS report;
+Named "Custom Appraisal Overview" because "Appraisal Overview" is a standard HRMS report;
 a report of that name shipped from here would fight HRMS for the same row on migrate.
 
 Brand scores are computed live from submitted Marafiki Brand Assessments rather than

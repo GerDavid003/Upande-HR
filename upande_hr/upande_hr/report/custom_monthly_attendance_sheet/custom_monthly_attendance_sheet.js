@@ -6,7 +6,7 @@
 // Original: Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.query_reports["TSH Monthly Attendance Sheet"] = {
+frappe.query_reports["Custom Monthly Attendance Sheet"] = {
 	filters: [
 		{
 			fieldname: "filter_based_on",

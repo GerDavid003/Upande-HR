@@ -40,6 +40,7 @@
   "sub_county",
   "postal_address",
   "next_of_kin_section",
+  "emergency_contacts",
   "next_of_kin",
   "family_members",
   "bank_section",
@@ -159,7 +160,8 @@
    "fieldname": "marital_status",
    "fieldtype": "Select",
    "label": "Marital Status",
-   "options": "\nSingle\nMarried\nDivorced\nWidowed"
+   "options": "\nSingle\nMarried\nDivorced\nWidowed",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_basic",
@@ -228,17 +230,20 @@
   {
    "fieldname": "estate_village",
    "fieldtype": "Data",
-   "label": "Estate / Village"
+   "label": "Estate / Village",
+   "reqd": 1
   },
   {
    "fieldname": "nearest_town",
    "fieldtype": "Data",
-   "label": "Nearest Town"
+   "label": "Nearest Town",
+   "reqd": 1
   },
   {
    "fieldname": "landmark",
    "fieldtype": "Data",
-   "label": "Landmark"
+   "label": "Landmark",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_residence",
@@ -247,12 +252,14 @@
   {
    "fieldname": "county",
    "fieldtype": "Data",
-   "label": "County"
+   "label": "County",
+   "reqd": 1
   },
   {
    "fieldname": "sub_county",
    "fieldtype": "Data",
-   "label": "Sub-County"
+   "label": "Sub-County",
+   "reqd": 1
   },
   {
    "fieldname": "postal_address",
@@ -262,7 +269,14 @@
   {
    "fieldname": "next_of_kin_section",
    "fieldtype": "Section Break",
-   "label": "Next of Kin & Family"
+   "label": "Emergency Contacts, Next of Kin & Immediate Family Members"
+  },
+  {
+   "fieldname": "emergency_contacts",
+   "fieldtype": "Table",
+   "label": "Emergency Contacts",
+   "options": "Employee Emergency Contact",
+   "reqd": 1
   },
   {
    "fieldname": "next_of_kin",
@@ -274,7 +288,7 @@
   {
    "fieldname": "family_members",
    "fieldtype": "Table",
-   "label": "Family Members",
+   "label": "Family Members (siblings, parents, parents-in-law)",
    "options": "Employee Family Member"
   },
   {
@@ -347,7 +361,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-15 12:00:00",
+ "modified": "2026-10-19 00:00:00",
  "modified_by": "Administrator",
  "module": "Upande Hr",
  "name": "Employee Details Update",

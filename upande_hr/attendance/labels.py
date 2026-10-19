@@ -8,7 +8,7 @@ HRMS set it. Overwriting status was considered and rejected: status is a fixed S
 that HRMS compares by string all over - the Monthly Attendance Sheet abbreviates via
 status_map.get(status, "") and counts only Present / Work From Home as present days - so
 a status of "ALBA" renders blank and drops out of every present-day total. The label is
-surfaced instead by the TSH Monthly Attendance Sheet report.
+surfaced instead by the Custom Monthly Attendance Sheet report.
 
 Records are found by employee and date rather than by Attendance.attendance_request.
 HRMS only stamps attendance_request when it creates a record or changes its status, so an
