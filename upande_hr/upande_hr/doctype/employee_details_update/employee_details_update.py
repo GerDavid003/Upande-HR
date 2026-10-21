@@ -8,8 +8,8 @@ is set to today. Leave Application is gated on that date being in the current ca
 year (see gate_leave_application below), so everyone re-locks on 1 January without a
 reset job.
 
-Bank and M-Pesa changes are the fraud-sensitive part: payroll pays into whatever is on
-the Employee. validate() flags bank_details_changed when they differ from the Employee,
+Bank details (salary mode, bank, branch, account) and M-Pesa are the fraud-sensitive
+part: payroll pays into whatever is on the Employee. validate() flags bank_details_changed when they differ from the Employee,
 and the "Employee Details Update Approval" Workflow routes a flagged form through
 Pending HR Review instead of letting the employee submit it straight to Approved.
 
@@ -53,11 +53,15 @@ FIELD_MAP = {
 	"county": "custom_county",
 	"sub_county": "custom_sub_county",
 	"postal_address": "custom_postal_address",
-	"bank_name": "bank_name",
+	"salary_mode": "salary_mode",
+	# Employee.bank_name is a Link to Bank on TSH (Property Setter), not the free-text
+	# name the label suggests. custom_bank_branch is an Upande Payroll field.
+	"bank": "bank_name",
+	"bank_branch": "custom_bank_branch",
 	"bank_ac_no": "bank_ac_no",
 	"mpesa_number": "custom_mpesa_number",
 }
-BANK_FIELDS = ("bank_name", "bank_ac_no", "mpesa_number")
+BANK_FIELDS = ("salary_mode", "bank", "bank_branch", "bank_ac_no", "mpesa_number")
 NOK_FIELDS = ("full_name", "relationship", "national_id_no", "phone_no", "allocation_percentage")
 FAMILY_FIELDS = ("full_name", "relationship", "id_number")
 EC_FIELDS = ("contact_name", "relationship", "phone")

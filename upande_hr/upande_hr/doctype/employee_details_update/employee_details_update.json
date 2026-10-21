@@ -44,9 +44,11 @@
   "next_of_kin",
   "family_members",
   "bank_section",
-  "bank_name",
-  "bank_ac_no",
+  "salary_mode",
+  "bank",
+  "bank_branch",
   "column_break_bank",
+  "bank_ac_no",
   "mpesa_number",
   "bank_details_changed",
   "status_section",
@@ -294,22 +296,39 @@
   {
    "fieldname": "bank_section",
    "fieldtype": "Section Break",
-   "label": "Bank / M-Pesa",
+   "label": "Bank Details",
    "description": "Changes here are reviewed by HR before they reach your Employee record."
   },
   {
-   "fieldname": "bank_name",
-   "fieldtype": "Data",
-   "label": "Bank Name"
+   "fieldname": "salary_mode",
+   "fieldtype": "Select",
+   "label": "Salary Mode",
+   "options": "\nBank\nCash\nCheque\nM-Pesa",
+   "reqd": 1
   },
   {
-   "fieldname": "bank_ac_no",
-   "fieldtype": "Data",
-   "label": "Bank Account No."
+   "fieldname": "bank",
+   "fieldtype": "Link",
+   "label": "Bank",
+   "options": "Bank",
+   "mandatory_depends_on": "eval:doc.salary_mode=='Bank'"
+  },
+  {
+   "fieldname": "bank_branch",
+   "fieldtype": "Link",
+   "label": "Bank Branch",
+   "options": "Bank Branch",
+   "mandatory_depends_on": "eval:doc.salary_mode=='Bank'"
   },
   {
    "fieldname": "column_break_bank",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "bank_ac_no",
+   "fieldtype": "Data",
+   "label": "Bank A/C No.",
+   "mandatory_depends_on": "eval:doc.salary_mode=='Bank'"
   },
   {
    "fieldname": "mpesa_number",
@@ -361,7 +380,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-19 00:00:00",
+ "modified": "2026-10-21 00:00:00",
  "modified_by": "Administrator",
  "module": "Upande Hr",
  "name": "Employee Details Update",

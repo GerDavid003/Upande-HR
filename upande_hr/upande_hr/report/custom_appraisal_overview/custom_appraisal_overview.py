@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Upande and contributors
 # For license information, please see license.txt
 
-"""Custom Appraisal Overview - brand (Marafiki) and KPI scores side by side.
+"""Custom Appraisal Overview - per-criterion brand (Marafiki) scores and KPI side by side.
 
 Named "Custom Appraisal Overview" because "Appraisal Overview" is a standard HRMS report;
 a report of that name shipped from here would fight HRMS for the same row on migrate.
@@ -16,7 +16,11 @@ figures agree with the Appraisal's Score tab:
 - each criterion is averaged across raters (submitted assessments only)
 - ARCS /40 and WROCCS /60 are the sums of those per-criterion averages
 - Brand /100 = ARCS + WROCCS, Brand Contribution /20 = Brand / 5
-- KPI /100 = custom_hod_hr_score (a 0-5 weighted score) / 5 * 100, KPI /80 = KPI * 0.8
+- KPI /100 = custom_hod_hr_score (a 0-5 weighted score) / 5 * 100
+
+Each criterion has its own column, labelled in full (Authenticity, not A): WROCCS shares
+the initials R and C with ARCS, and query reports have no column-group headers to tell
+them apart.
 """
 
 import frappe
@@ -25,15 +29,23 @@ from frappe.utils import flt
 
 MBA = "Marafiki Brand Assessment"
 
-ARCS_FIELDS = ["arcs_authenticity", "arcs_resourcefulness", "arcs_craftsmanship", "arcs_sparkle"]
-WROCCS_FIELDS = [
-	"wroccs_work_smart",
-	"wroccs_respectful",
-	"wroccs_open_minded",
-	"wroccs_candid",
-	"wroccs_communicative",
-	"wroccs_systematic",
-]
+# MBA criterion field -> column label, in the order the columns render.
+ARCS_LABELS = {
+	"arcs_authenticity": "Authenticity",
+	"arcs_resourcefulness": "Resourcefulness",
+	"arcs_craftsmanship": "Craftsmanship",
+	"arcs_sparkle": "Sparkle",
+}
+WROCCS_LABELS = {
+	"wroccs_work_smart": "Work-Smart",
+	"wroccs_respectful": "Respectful",
+	"wroccs_open_minded": "Open-Minded",
+	"wroccs_candid": "Candid",
+	"wroccs_communicative": "Communicative",
+	"wroccs_systematic": "Systematic",
+}
+ARCS_FIELDS = list(ARCS_LABELS)
+WROCCS_FIELDS = list(WROCCS_LABELS)
 
 
 def execute(filters=None):
@@ -44,27 +56,15 @@ def execute(filters=None):
 	rows = []
 	for apr in appraisals:
 		scores = brand.get((apr.employee, apr.appraisal_cycle), {})
-		kpi_100 = flt(flt(apr.custom_hod_hr_score) / 5 * 100, 2)
 		rows.append(
 			{
-				"appraisal": apr.name,
 				"employee": apr.employee,
 				"employee_name": apr.employee_name,
 				"department": apr.department,
 				"designation": apr.designation,
 				"appraisal_template": apr.appraisal_template,
-				"appraisal_cycle": apr.appraisal_cycle,
-				"workflow_state": apr.workflow_state,
-				"raters_submitted": scores.get("raters", 0),
-				"avg_arcs": scores.get("avg_arcs"),
-				"arcs_40": scores.get("arcs_40"),
-				"avg_wroccs": scores.get("avg_wroccs"),
-				"wroccs_60": scores.get("wroccs_60"),
-				"brand_100": scores.get("brand_100"),
-				"brand_20": scores.get("brand_20"),
-				"kpi_80": flt(kpi_100 * 0.8, 2),
-				"kpi_100": kpi_100,
-				"final_score": flt(kpi_100 * 0.8 + flt(scores.get("brand_100")) * 0.2, 2),
+				**scores,
+				"kpi_100": flt(flt(apr.custom_hod_hr_score) / 5 * 100, 2),
 			}
 		)
 
@@ -88,7 +88,6 @@ def get_appraisals(filters) -> list:
 			"designation",
 			"appraisal_template",
 			"appraisal_cycle",
-			"workflow_state",
 			"custom_hod_hr_score",
 		],
 		order_by="department, employee_name",
@@ -130,10 +129,8 @@ def get_brand_scores(appraisals) -> dict:
 		wroccs = flt(sum(criterion_avg[f] for f in WROCCS_FIELDS), 2)
 		brand = flt(arcs + wroccs, 2)
 		out[key] = {
-			"raters": n,
-			"avg_arcs": flt(arcs / len(ARCS_FIELDS), 3),
+			**criterion_avg,
 			"arcs_40": arcs,
-			"avg_wroccs": flt(wroccs / len(WROCCS_FIELDS), 3),
 			"wroccs_60": wroccs,
 			"brand_100": brand,
 			"brand_20": flt(brand / 5, 2),
@@ -144,15 +141,8 @@ def get_brand_scores(appraisals) -> dict:
 def get_columns() -> list[dict]:
 	return [
 		{
-			"fieldname": "appraisal",
-			"label": _("Appraisal"),
-			"fieldtype": "Link",
-			"options": "Appraisal",
-			"width": 160,
-		},
-		{
 			"fieldname": "employee",
-			"label": _("Employee"),
+			"label": _("Employee No"),
 			"fieldtype": "Link",
 			"options": "Employee",
 			"width": 120,
@@ -179,69 +169,21 @@ def get_columns() -> list[dict]:
 			"options": "Appraisal Template",
 			"width": 160,
 		},
-		{"fieldname": "workflow_state", "label": _("Status"), "fieldtype": "Data", "width": 130},
-		{"fieldname": "raters_submitted", "label": _("Raters"), "fieldtype": "Int", "width": 70},
-		{
-			"fieldname": "avg_arcs",
-			"label": _("Avg ARCS (/10)"),
-			"fieldtype": "Float",
-			"precision": 3,
-			"width": 110,
-		},
-		{
-			"fieldname": "arcs_40",
-			"label": _("ARCS (/40)"),
-			"fieldtype": "Float",
-			"precision": 2,
-			"width": 100,
-		},
-		{
-			"fieldname": "avg_wroccs",
-			"label": _("Avg WROCCS (/10)"),
-			"fieldtype": "Float",
-			"precision": 3,
-			"width": 120,
-		},
-		{
-			"fieldname": "wroccs_60",
-			"label": _("WROCCS (/60)"),
-			"fieldtype": "Float",
-			"precision": 2,
-			"width": 110,
-		},
-		{
-			"fieldname": "brand_100",
-			"label": _("Avg Marafiki (/100)"),
-			"fieldtype": "Float",
-			"precision": 2,
-			"width": 130,
-		},
-		{
-			"fieldname": "brand_20",
-			"label": _("Brand Contribution (/20)"),
-			"fieldtype": "Float",
-			"precision": 2,
-			"width": 150,
-		},
-		{
-			"fieldname": "kpi_80",
-			"label": _("KPI Score (/80)"),
-			"fieldtype": "Float",
-			"precision": 2,
-			"width": 110,
-		},
-		{
-			"fieldname": "kpi_100",
-			"label": _("KPI Score (/100)"),
-			"fieldtype": "Float",
-			"precision": 2,
-			"width": 120,
-		},
-		{
-			"fieldname": "final_score",
-			"label": _("Final Score (/100)"),
-			"fieldtype": "Float",
-			"precision": 2,
-			"width": 130,
-		},
+		*[score_column(field, label, 10) for field, label in ARCS_LABELS.items()],
+		score_column("arcs_40", "ARCS Avg", 40),
+		*[score_column(field, label, 10) for field, label in WROCCS_LABELS.items()],
+		score_column("wroccs_60", "WROCCS Avg", 60),
+		score_column("brand_100", "Brand Score", 100),
+		score_column("brand_20", "Brand Contribution", 20),
+		score_column("kpi_100", "KPI", 100),
 	]
+
+
+def score_column(fieldname: str, label: str, out_of: int) -> dict:
+	return {
+		"fieldname": fieldname,
+		"label": _(label) + f" (/{out_of})",
+		"fieldtype": "Float",
+		"precision": 2,
+		"width": max(110, 9 * len(label) + 50),
+	}

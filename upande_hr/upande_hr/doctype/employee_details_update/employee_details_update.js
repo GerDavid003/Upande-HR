@@ -4,6 +4,12 @@
 const EDU_METHOD = "upande_hr.upande_hr.doctype.employee_details_update.employee_details_update";
 
 frappe.ui.form.on("Employee Details Update", {
+	setup(frm) {
+		frm.set_query("bank_branch", () => ({
+			filters: { bank: frm.doc.bank, disabled: 0 },
+		}));
+	},
+
 	onload(frm) {
 		if (!frm.is_new() || frm.doc.employee) return;
 		frappe.call(`${EDU_METHOD}.get_session_employee`).then((r) => {
@@ -25,5 +31,9 @@ frappe.ui.form.on("Employee Details Update", {
 				frm.set_value(details);
 				frm.refresh_fields();
 			});
+	},
+
+	bank(frm) {
+		if (frm.doc.bank_branch) frm.set_value("bank_branch", null);
 	},
 });
