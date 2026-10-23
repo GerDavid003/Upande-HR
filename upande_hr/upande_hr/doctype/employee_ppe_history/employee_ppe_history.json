@@ -8,6 +8,7 @@
  "field_order": [
   "ppe_assignment",
   "item_code",
+  "item_name",
   "quantity",
   "issue_date",
   "expiry_date",
@@ -34,6 +35,13 @@
    "options": "Item"
   },
   {
+   "fetch_from": "item_code.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Name"
+  },
+  {
    "fieldname": "quantity",
    "fieldtype": "Float",
    "in_list_view": 1,
@@ -57,7 +65,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Active\nInactive\nExpired\nReturned"
+   "options": "Active\nInactive\nExpired\nReturned\nReplaced"
   },
   {
    "fieldname": "stock_entry",
