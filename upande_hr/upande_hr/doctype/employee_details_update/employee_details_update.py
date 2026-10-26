@@ -65,9 +65,38 @@ BANK_FIELDS = ("salary_mode", "bank", "bank_branch", "bank_ac_no", "mpesa_number
 NOK_FIELDS = ("full_name", "relationship", "national_id_no", "phone_no", "allocation_percentage")
 FAMILY_FIELDS = ("full_name", "relationship", "id_number")
 EC_FIELDS = ("contact_name", "relationship", "phone")
+# An employee may have one form open at a time. Approved (submitted), Rejected and
+# cancelled forms are finished; anything else - Draft, Pending HR Review - is still open.
+# Rejected is the only finished state that stays a draft, hence docstatus 0 below.
+REJECTED = "Rejected"
 
 
 class EmployeeDetailsUpdate(Document):
+	def before_insert(self):
+		self.validate_one_open_form()
+
+	def validate_one_open_form(self):
+		"""Applies only to an employee filling in their own form, not HR filing for them."""
+		own = get_session_employee()
+		if not own or self.employee != own:
+			return
+		existing = get_open_form(own)
+		if not existing:
+			return
+		link = f'<a href="/app/employee-details-update/{existing.name}">{existing.name}</a>'
+		if existing.workflow_state == "Pending HR Review":
+			next_step = _("You can start a new one once HR has approved or rejected it.")
+		else:
+			next_step = _("Please finish and submit it instead of starting a new one.")
+		frappe.throw(
+			_("You already have a Details Update form ({0}) in status {1}.").format(
+				link, frappe.bold(existing.workflow_state or "Draft")
+			)
+			+ " "
+			+ next_step,
+			title=_("Active Submission Exists"),
+		)
+
 	def validate(self):
 		self.validate_own_record()
 		self.validate_emergency_contacts()
@@ -174,6 +203,28 @@ def get_current_details(employee: str) -> dict:
 @frappe.whitelist()
 def get_session_employee() -> str | None:
 	return frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
+
+
+def get_open_form(employee: str):
+	"""The employee's unfinished form, the most recent if there is more than one (forms
+	made before the one-open-form rule may have left several)."""
+	# Filtered here rather than in the query: a "!=" filter drops rows whose
+	# workflow_state is NULL, and those are still open.
+	drafts = frappe.get_all(
+		"Employee Details Update",
+		filters={"employee": employee, "docstatus": 0},
+		fields=["name", "workflow_state"],
+		order_by="modified desc",
+	)
+	return next((d for d in drafts if d.workflow_state != REJECTED), None)
+
+
+@frappe.whitelist()
+def get_active_submission() -> str | None:
+	"""The session user's own unfinished form, for the list and new-form redirects."""
+	employee = get_session_employee()
+	form = get_open_form(employee) if employee else None
+	return form.name if form else None
 
 
 def details_confirmed_this_year(employee: str) -> bool:

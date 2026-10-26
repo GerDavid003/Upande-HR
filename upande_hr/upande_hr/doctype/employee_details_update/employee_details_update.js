@@ -11,7 +11,21 @@ frappe.ui.form.on("Employee Details Update", {
 	},
 
 	onload(frm) {
-		if (!frm.is_new() || frm.doc.employee) return;
+		if (!frm.is_new()) return;
+		// One open form per employee (see validate_one_open_form). Send them to it here
+		// rather than let them fill in a new one that will be refused on save. The leave
+		// gate opens a new form directly, so the list's redirect alone does not cover it.
+		if (
+			frappe.session.user !== "Administrator" &&
+			!frappe.user.has_role(["HR User", "HR Manager"])
+		) {
+			frappe.call(`${EDU_METHOD}.get_active_submission`).then((r) => {
+				if (!r.message) return;
+				frappe.route_flags.replace_route = true;
+				frappe.set_route("Form", "Employee Details Update", r.message);
+			});
+		}
+		if (frm.doc.employee) return;
 		frappe.call(`${EDU_METHOD}.get_session_employee`).then((r) => {
 			if (r.message) frm.set_value("employee", r.message);
 		});
