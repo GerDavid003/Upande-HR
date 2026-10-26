@@ -1,0 +1,183 @@
+[
+ {
+  "attach_print": 0,
+  "channel": "Email",
+  "condition": "doc.workflow_state == \"Pending HOD Review\"",
+  "condition_type": "Python",
+  "doctype": "Notification",
+  "document_type": "Charge Sheet",
+  "enabled": 1,
+  "event": "Value Change",
+  "is_standard": 0,
+  "message": "A charge sheet for {{ doc.employee_name }} has been submitted for your review.\n\n<a href=\"{{ frappe.utils.get_url_to_form(doc.doctype, doc.name) }}\">{{ _('Open {0}').format(doc.name) }}</a>",
+  "message_type": "HTML",
+  "modified": "2026-10-26 00:00:00",
+  "module": "Upande Hr",
+  "name": "Charge Sheet - Pending HOD Review",
+  "recipients": [
+   {
+    "bcc": null,
+    "cc": null,
+    "condition": null,
+    "receiver_by_document_field": "hod_user",
+    "receiver_by_role": null
+   }
+  ],
+  "send_system_notification": 0,
+  "send_to_all_assignees": 0,
+  "subject": "Charge Sheet Pending Your Review",
+  "value_changed": "workflow_state"
+ },
+ {
+  "attach_print": 0,
+  "channel": "Email",
+  "condition": "doc.workflow_state == \"Pending HRM Review\"",
+  "condition_type": "Python",
+  "doctype": "Notification",
+  "document_type": "Charge Sheet",
+  "enabled": 1,
+  "event": "Value Change",
+  "is_standard": 0,
+  "message": "A charge sheet for {{ doc.employee_name }} is pending HRM review.\n\n<a href=\"{{ frappe.utils.get_url_to_form(doc.doctype, doc.name) }}\">{{ _('Open {0}').format(doc.name) }}</a>",
+  "message_type": "HTML",
+  "modified": "2026-10-26 00:00:00",
+  "module": "Upande Hr",
+  "name": "Charge Sheet - Pending HRM Review",
+  "recipients": [
+   {
+    "bcc": null,
+    "cc": null,
+    "condition": null,
+    "receiver_by_document_field": null,
+    "receiver_by_role": "HR Manager"
+   }
+  ],
+  "send_system_notification": 0,
+  "send_to_all_assignees": 0,
+  "subject": "Charge Sheet Pending HRM Review",
+  "value_changed": "workflow_state"
+ },
+ {
+  "attach_print": 0,
+  "channel": "Email",
+  "condition": "doc.workflow_state == \"Pending Employee Acknowledgement\"",
+  "condition_type": "Python",
+  "doctype": "Notification",
+  "document_type": "Charge Sheet",
+  "enabled": 1,
+  "event": "Value Change",
+  "is_standard": 0,
+  "message": "A charge sheet has been raised against you and requires your acknowledgement. Please log in to review and sign.\n\n<a href=\"{{ frappe.utils.get_url_to_form(doc.doctype, doc.name) }}\">{{ _('Open {0}').format(doc.name) }}</a>",
+  "message_type": "HTML",
+  "modified": "2026-10-26 00:00:00",
+  "module": "Upande Hr",
+  "name": "Charge Sheet - Pending Employee Acknowledgement",
+  "recipients": [
+   {
+    "bcc": null,
+    "cc": null,
+    "condition": null,
+    "receiver_by_document_field": "employee_user",
+    "receiver_by_role": null
+   }
+  ],
+  "send_system_notification": 0,
+  "send_to_all_assignees": 0,
+  "subject": "Please Acknowledge Your Charge Sheet",
+  "value_changed": "workflow_state"
+ },
+ {
+  "attach_print": 0,
+  "channel": "Email",
+  "condition": "doc.workflow_state == \"Pending Group HR\"",
+  "condition_type": "Python",
+  "doctype": "Notification",
+  "document_type": "Charge Sheet",
+  "enabled": 1,
+  "event": "Value Change",
+  "is_standard": 0,
+  "message": "A charge sheet for {{ doc.employee_name }} is pending Group HR review.\n\n<a href=\"{{ frappe.utils.get_url_to_form(doc.doctype, doc.name) }}\">{{ _('Open {0}').format(doc.name) }}</a>",
+  "message_type": "HTML",
+  "modified": "2026-10-26 00:00:00",
+  "module": "Upande Hr",
+  "name": "Charge Sheet - Pending Group HR",
+  "recipients": [
+   {
+    "bcc": null,
+    "cc": null,
+    "condition": null,
+    "receiver_by_document_field": null,
+    "receiver_by_role": "Group HR Manager"
+   }
+  ],
+  "send_system_notification": 0,
+  "send_to_all_assignees": 0,
+  "subject": "Charge Sheet Pending Group HR Approval",
+  "value_changed": "workflow_state"
+ },
+ {
+  "attach_print": 0,
+  "channel": "Email",
+  "condition": "doc.workflow_state == \"Pending Finance\"",
+  "condition_type": "Python",
+  "doctype": "Notification",
+  "document_type": "Charge Sheet",
+  "enabled": 1,
+  "event": "Value Change",
+  "is_standard": 0,
+  "message": "A charge sheet for {{ doc.employee_name }} is pending Finance approval.\n\n<a href=\"{{ frappe.utils.get_url_to_form(doc.doctype, doc.name) }}\">{{ _('Open {0}').format(doc.name) }}</a>",
+  "message_type": "HTML",
+  "modified": "2026-10-26 00:00:00",
+  "module": "Upande Hr",
+  "name": "Charge Sheet - Pending Finance",
+  "recipients": [
+   {
+    "bcc": null,
+    "cc": null,
+    "condition": null,
+    "receiver_by_document_field": null,
+    "receiver_by_role": "Finance Controller"
+   }
+  ],
+  "send_system_notification": 0,
+  "send_to_all_assignees": 0,
+  "subject": "Charge Sheet Pending Finance Approval",
+  "value_changed": "workflow_state"
+ },
+ {
+  "attach_print": 0,
+  "channel": "Email",
+  "condition": "doc.workflow_state == \"Approved\"",
+  "condition_type": "Python",
+  "doctype": "Notification",
+  "document_type": "Charge Sheet",
+  "enabled": 1,
+  "event": "Value Change",
+  "is_standard": 0,
+  "message": "The charge sheet for {{ doc.employee_name }} has been approved. Salary deductions will be applied as per the schedule.\n\n<a href=\"{{ frappe.utils.get_url_to_form(doc.doctype, doc.name) }}\">{{ _('Open {0}').format(doc.name) }}</a>",
+  "message_type": "HTML",
+  "modified": "2026-10-26 00:00:00",
+  "module": "Upande Hr",
+  "name": "Charge Sheet - Approved",
+  "recipients": [
+   {
+    "bcc": null,
+    "cc": null,
+    "condition": null,
+    "receiver_by_document_field": null,
+    "receiver_by_role": "HR Manager"
+   },
+   {
+    "bcc": null,
+    "cc": null,
+    "condition": null,
+    "receiver_by_document_field": "employee_user",
+    "receiver_by_role": null
+   }
+  ],
+  "send_system_notification": 0,
+  "send_to_all_assignees": 0,
+  "subject": "Charge Sheet Approved",
+  "value_changed": "workflow_state"
+ }
+]

@@ -3,10 +3,17 @@
 
 """Charge Sheet - recovering the cost of lost, broken, misplaced or under-charged items.
 
-Flow ("Charge Sheet Workflow"): Draft -> Pending Employee Acknowledgement -> Pending PD
-Review -> Approved (submit) -> Closed (Finance Controller signs). The signature dates are
-stamped here from the state transition rather than typed in, so they record when each
-person actually acted.
+Flow ("Charge Sheet Workflow") has two entry points that meet at HRM review:
+  HR Manager raises it: Draft -> Pending HOD Review -> Pending HRM Review -> ...
+  HOD raises it:        Draft -> Pending HRM Review -> ...
+then Pending Employee Acknowledgement -> Pending Group HR -> Pending Finance -> Approved
+(submit). HR Manager can Cancel from any state before Approved; an Approved sheet is
+submitted, so it is cancelled the ordinary way, which also cancels its Additional Salaries.
+The signature dates are stamped here from the state transition rather than typed in, so
+they record when each person actually acted.
+
+The workflow sends no email of its own. Each state has a Notification instead (fixtures),
+and the Pending HOD Review one goes to hod_user, set below.
 
 On submit one Additional Salary is created per deduction row, against the "Charge Sheet
 Recovery" deduction component, so the recovery reaches payroll with no one touching a
@@ -31,6 +38,7 @@ PRIVILEGED_ROLES = {
 	"HR Manager",
 	"HR User",
 	"People Development",
+	"Group HR Manager",
 	"Finance Controller",
 	"HOD",
 	"System Manager",
@@ -38,23 +46,25 @@ PRIVILEGED_ROLES = {
 
 # workflow_state reached -> the date field that transition signs
 SIGNATURES = {
-	"Pending Employee Acknowledgement": "manager_signature_date",
-	"Pending PD Review": "employee_signature_date",
-	"Approved": "pd_signature_date",
-	"Closed": "fc_signature_date",
+	"Pending HRM Review": "manager_signature_date",
+	"Pending Group HR": "employee_signature_date",
+	"Pending Finance": "pd_signature_date",
+	"Approved": "fc_signature_date",
 }
+
+ACKNOWLEDGEMENT = ("Pending Employee Acknowledgement", "Pending Group HR")
 
 
 class ChargeSheet(Document):
 	def validate(self):
 		self.payroll_number = self.employee
+		self.set_hod_user()
 		self.validate_employee_edit()
+		self.validate_acknowledgement()
 		self.validate_issuer()
+		self.validate_incident()
 		self.validate_schedule()
 		self.stamp_signature()
-
-	def on_update_after_submit(self):
-		self.stamp_signature(db=True)
 
 	def validate_employee_edit(self):
 		"""The charged employee has write permission only so the Acknowledge transition
@@ -66,7 +76,15 @@ class ChargeSheet(Document):
 			return
 		changed = [
 			field
-			for field in ("employee", "amount", "reason", "incident_date", "nature_of_incident", "issued_by")
+			for field in (
+				"employee",
+				"amount",
+				"reason",
+				"incident_date",
+				"nature_of_incident",
+				"custom_incident_other_details",
+				"issued_by",
+			)
 			if self.get(field) != before.get(field)
 		]
 		if changed or get_schedule(self) != get_schedule(before):
@@ -74,9 +92,39 @@ class ChargeSheet(Document):
 				_("You can acknowledge this charge sheet but not change it."), frappe.PermissionError
 			)
 
+	def set_hod_user(self):
+		"""The charged employee's HOD - who they report to, else whoever issued the sheet."""
+		hod = frappe.db.get_value("Employee", self.employee, "reports_to") or self.issued_by
+		self.hod_user = frappe.db.get_value("Employee", hod, "user_id") if hod else None
+
+	def validate_acknowledgement(self):
+		"""Only the charged employee acknowledges, and the date they did is final.
+
+		The Acknowledge transition's condition already hides the button from everyone
+		else; this is the server-side check behind it, for anything that bypasses the form.
+		"""
+		before = self.get_doc_before_save()
+		if not before:
+			return
+		if (before.workflow_state, self.workflow_state) == ACKNOWLEDGEMENT:
+			acting_employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
+			if not acting_employee or acting_employee != self.employee:
+				frappe.throw(
+					_("Only the charged employee can acknowledge this Charge Sheet."), frappe.PermissionError
+				)
+		if before.employee_signature_date and self.employee_signature_date != before.employee_signature_date:
+			frappe.throw(_("The employee's acknowledgement date cannot be changed once signed."))
+
 	def validate_issuer(self):
 		if self.issued_by and self.issued_by == self.employee:
 			frappe.throw(_("A charge sheet cannot be issued by the employee it is raised against."))
+
+	def validate_incident(self):
+		# mandatory_depends_on is only enforced by the form, not on save.
+		if self.nature_of_incident != "Other":
+			self.custom_incident_other_details = None
+		elif not (self.custom_incident_other_details or "").strip():
+			frappe.throw(_("Please specify the nature of the incident."))
 
 	def validate_schedule(self):
 		scheduled = flt(sum(flt(row.amount) for row in self.deductions), 2)
@@ -91,13 +139,9 @@ class ChargeSheet(Document):
 		if len(months) != len(set(months)):
 			frappe.throw(_("Each month can appear only once in the deduction schedule."))
 
-	def stamp_signature(self, db=False):
+	def stamp_signature(self):
 		field = SIGNATURES.get(self.workflow_state)
-		if not field or self.get(field):
-			return
-		if db:
-			self.db_set(field, today())
-		else:
+		if field and not self.get(field):
 			self.set(field, today())
 
 	def on_submit(self):

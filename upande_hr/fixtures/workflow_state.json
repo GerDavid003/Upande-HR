@@ -90,9 +90,49 @@
  {
   "doctype": "Workflow State",
   "icon": null,
-  "modified": "2026-10-15 00:00:00",
-  "name": "Pending PD Review",
+  "modified": "2026-10-26 00:00:00",
+  "name": "Pending HOD Review",
+  "style": "Primary",
+  "workflow_state_name": "Pending HOD Review"
+ },
+ {
+  "doctype": "Workflow State",
+  "icon": null,
+  "modified": "2026-10-26 00:00:00",
+  "name": "Pending HRM Review",
   "style": "Warning",
-  "workflow_state_name": "Pending PD Review"
+  "workflow_state_name": "Pending HRM Review"
+ },
+ {
+  "doctype": "Workflow State",
+  "icon": null,
+  "modified": "2026-10-26 00:00:00",
+  "name": "Pending Group HR",
+  "style": "Primary",
+  "workflow_state_name": "Pending Group HR"
+ },
+ {
+  "doctype": "Workflow State",
+  "icon": null,
+  "modified": "2026-10-26 00:00:00",
+  "name": "Pending Finance",
+  "style": "Primary",
+  "workflow_state_name": "Pending Finance"
+ },
+ {
+  "doctype": "Workflow State",
+  "icon": null,
+  "modified": "2026-10-26 00:00:00",
+  "name": "Approved",
+  "style": "Success",
+  "workflow_state_name": "Approved"
+ },
+ {
+  "doctype": "Workflow State",
+  "icon": null,
+  "modified": "2026-10-26 00:00:00",
+  "name": "Cancelled",
+  "style": "Danger",
+  "workflow_state_name": "Cancelled"
  }
 ]

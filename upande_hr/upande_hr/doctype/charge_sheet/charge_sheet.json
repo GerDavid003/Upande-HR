@@ -12,6 +12,7 @@
   "payroll_number",
   "department",
   "employee_user",
+  "hod_user",
   "company",
   "currency",
   "column_break_header",
@@ -21,6 +22,7 @@
   "incident_section",
   "incident_date",
   "nature_of_incident",
+  "custom_incident_other_details",
   "column_break_incident",
   "amount",
   "reason",
@@ -90,6 +92,15 @@
    "hidden": 1
   },
   {
+   "fieldname": "hod_user",
+   "fieldtype": "Link",
+   "label": "HOD User",
+   "options": "User",
+   "read_only": 1,
+   "hidden": 1,
+   "description": "Who the Pending HOD Review notification goes to."
+  },
+  {
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
@@ -150,9 +161,16 @@
    "fieldname": "nature_of_incident",
    "fieldtype": "Select",
    "label": "Nature of Incident",
-   "options": "\nLost\nBroken\nMisplaced\nUnder Charged",
+   "options": "\nLost\nBroken\nMisplaced\nUnder Charged\nOther",
    "reqd": 1,
    "in_list_view": 1
+  },
+  {
+   "fieldname": "custom_incident_other_details",
+   "fieldtype": "Small Text",
+   "label": "Please specify",
+   "depends_on": "eval:doc.nature_of_incident == 'Other'",
+   "mandatory_depends_on": "eval:doc.nature_of_incident == 'Other'"
   },
   {
    "fieldname": "column_break_incident",
@@ -213,12 +231,12 @@
   {
    "fieldname": "pd_recommendation",
    "fieldtype": "Small Text",
-   "label": "People Development Recommendation"
+   "label": "Group HR Recommendation"
   },
   {
    "fieldname": "pd_signature_date",
    "fieldtype": "Date",
-   "label": "People Development Signed On",
+   "label": "Group HR Signed On",
    "read_only": 1,
    "no_copy": 1
   },
@@ -251,7 +269,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-15 12:00:00",
+ "modified": "2026-10-26 00:00:00",
  "modified_by": "Administrator",
  "module": "Upande Hr",
  "name": "Charge Sheet",
@@ -283,9 +301,19 @@
    "export": 1
   },
   {
+   "role": "Group HR Manager",
+   "read": 1,
+   "write": 1,
+   "email": 1,
+   "print": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
    "role": "Finance Controller",
    "read": 1,
    "write": 1,
+   "submit": 1,
    "email": 1,
    "print": 1,
    "report": 1,
