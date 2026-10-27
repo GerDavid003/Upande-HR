@@ -199,30 +199,43 @@ fixtures = [
 					"HR Settings-custom_attendance_label_map",
 					"Leave Application-custom_auto_deducted",
 					"Attendance-custom_attendance_label",
+					# Away for Work on Attendance Request, built on the TSH UI and shipped
+					# so other sites get it. The approver fields fetch from these two.
+					# workflow_state is not here: the site's own workflow creates it.
+					"Department-custom_hr_manager_approver",
+					"Department-custom_hod_approver",
+					"Attendance Request-custom_designation",
+					"Attendance Request-custom_assignment_section",
+					"Attendance Request-custom_contact_person",
+					"Attendance Request-custom_contact_phone",
+					"Attendance Request-custom_assignment_col",
+					"Attendance Request-custom_departure_time",
+					"Attendance Request-custom_expected_return_time",
+					"Attendance Request-custom_confirmation_section",
+					"Attendance Request-custom_declaration_html",
+					"Attendance Request-custom_declaration_ack",
+					"Attendance Request-custom_approval_section",
+					"Attendance Request-custom_is_hod_request",
+					"Attendance Request-custom_hod_approver",
+					"Attendance Request-custom_hr_approver",
+					# Live anchors this on custom_is_hod_request alongside
+					# custom_hod_approver; re-anchored to keep the chain linear.
+					"Attendance Request-custom_hod_approved_by",
+					"Attendance Request-custom_hod_approved_on",
+					"Attendance Request-custom_approval_col",
+					"Attendance Request-custom_hr_approved_by",
+					"Attendance Request-custom_hr_approved_on",
 				],
 			]
 		],
 	},
-	{
-		"doctype": "Workflow",
-		"filters": [
-			[
-				"name",
-				"in",
-				[
-					"Extra Shift Compensation Approval",
-					"Disciplinary Case Workflow",
-					"Employee Details Update Approval",
-					"Charge Sheet Workflow",
-				],
-			]
-		],
-	},
-	# The Disciplinary Case workflow references states and actions that do not ship with
-	# Frappe, and a Workflow fixture does not pull its masters along. Without these two
-	# the workflow imports against rows that do not exist and the transitions never bind.
-	# "Open" is a stock Workflow State and is deliberately not re-shipped. "Draft" is not
-	# stock - Frappe ships only Pending, Approved and Rejected - so it ships here.
+	# No Workflow fixture. Workflows are managed on each site's UI and a deploy must never
+	# overwrite them; do not re-add one without an explicit decision to.
+	#
+	# The workflows built on the UI reference states and actions that do not ship with
+	# Frappe, so these two masters still ship. "Open" is a stock Workflow State and is
+	# deliberately not re-shipped. "Draft" is not stock - Frappe ships only Pending,
+	# Approved and Rejected - so it ships here.
 	{
 		"doctype": "Workflow State",
 		"filters": [
@@ -280,8 +293,7 @@ fixtures = [
 			]
 		],
 	},
-	# Charge Sheet permissions and workflow transitions name these. fixtures/role.json sorts
-	# before workflow.json, and sync_fixtures imports in sorted order, so they exist first.
+	# Charge Sheet permissions and the site's Charge Sheet workflow transitions name these.
 	{
 		"doctype": "Role",
 		"filters": [["name", "in", ["People Development", "Finance Controller", "Group HR Manager"]]],

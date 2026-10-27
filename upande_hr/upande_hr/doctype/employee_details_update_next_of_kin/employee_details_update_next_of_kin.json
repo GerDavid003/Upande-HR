@@ -45,12 +45,13 @@
    "fieldname": "allocation_percentage",
    "fieldtype": "Percent",
    "label": "Allocation (%)",
-   "in_list_view": 1
+   "in_list_view": 1,
+   "reqd": 1
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-10-19 00:00:00",
+ "modified": "2026-10-27 00:00:00",
  "modified_by": "Administrator",
  "module": "Upande Hr",
  "name": "Employee Details Update Next of Kin",

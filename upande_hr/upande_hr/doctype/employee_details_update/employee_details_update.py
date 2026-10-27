@@ -116,18 +116,21 @@ class EmployeeDetailsUpdate(Document):
 			frappe.throw(_("Please add at least one Emergency Contact."))
 
 	def validate_next_of_kin(self):
-		# Mirrors the "Employee - Next of Kin Allocation Check" Server Script on Employee,
-		# so the employee hears about it here rather than at write-back.
+		# Every next of kin needs a share, and the shares must account for the whole benefit.
 		if not self.next_of_kin:
 			frappe.throw(_("Please add at least one Next of Kin."))
 		total = 0
 		for row in self.next_of_kin:
-			if row.allocation_percentage is not None and flt(row.allocation_percentage) < 0:
-				frappe.throw(_("Next of Kin row {0}: Allocation (%) cannot be negative.").format(row.idx))
+			if flt(row.allocation_percentage) <= 0:
+				frappe.throw(
+					_("Row {0} in Next of Kin: Allocation (%) must be greater than 0.").format(row.idx)
+				)
 			total += flt(row.allocation_percentage)
-		if flt(total, 2) > 100:
+		if flt(total, 2) != 100:
 			frappe.throw(
-				_("Next of Kin allocation adds up to {0}%. It cannot exceed 100%.").format(flt(total, 2))
+				_("Next of Kin allocations must add up to exactly 100%. Current total: {0}%").format(
+					flt(total, 2)
+				)
 			)
 
 	def has_bank_change(self) -> bool:
