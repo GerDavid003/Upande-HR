@@ -107,6 +107,7 @@ fixtures = [
 				[
 					"Attendance-custom_comp_off_override",
 					"Attendance-custom_comp_off_request",
+					"Employee-reason_for_exit",
 				],
 			]
 		],
@@ -134,6 +135,7 @@ override_doctype_class = {
 # ------------
 
 before_uninstall = "upande_hr.install.before_uninstall"
+
 # after_uninstall = "upande_hr.uninstall.after_uninstall"
 
 # Integration Setup
@@ -185,7 +187,10 @@ doc_events = {
 		# Runs after Attendance.validate(), so it gets the last word over
 		# check_leave_record() reassigning status back to "On Leave".
 		"validate": "upande_hr.overrides.attendance.reassert_comp_off_override"
-	}
+	},
+	"Employee": {
+		"validate": "upande_hr.overrides.employee.validate_reason_for_exit",
+	},
 }
 
 # Scheduled Tasks
