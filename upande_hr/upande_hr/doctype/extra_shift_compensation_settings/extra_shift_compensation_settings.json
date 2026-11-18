@@ -11,8 +11,7 @@
  ],
  "fields": [
   {
-   "default": "Compensatory Off Day",
-   "description": "Leave Type credited when an Extra Shift Compensation row is approved.",
+   "description": "Leave Type credited when an Extra Shift Compensation row is approved. Left empty, the first of \"Compensatory Off Day\", \"Compensatory Off\" or any Leave Type marked Is Compensatory is used.",
    "fieldname": "leave_type",
    "fieldtype": "Link",
    "label": "Leave Type",

@@ -107,6 +107,23 @@ fixtures = [
 				[
 					"Attendance-custom_comp_off_override",
 					"Attendance-custom_comp_off_request",
+					# Absent -> Annual Leave deduction, on an Upande tab at the end of
+					# HR Settings.
+					"HR Settings-custom_upande_tab",
+					"HR Settings-custom_absent_deduction_section",
+					"HR Settings-custom_enable_absent_al_deduction",
+					"Leave Application-custom_auto_deducted",
+					# Altura additions to the Absent Deduction section, one linear anchor
+					# chain off custom_enable_absent_al_deduction. The next section on this
+					# tab (MOD Off) anchors on custom_notify_employee_on_absence_deduction.
+					"HR Settings-custom_absence_deduction_grades",
+					"HR Settings-custom_absence_deduction_exempt_employees",
+					"HR Settings-custom_absence_deduction_leave_type",
+					"HR Settings-custom_single_scan_counts_as_absent",
+					"HR Settings-custom_absence_deduction_start_date",
+					"HR Settings-custom_absence_on_insufficient_balance",
+					"HR Settings-custom_absence_lwp_leave_type",
+					"HR Settings-custom_notify_employee_on_absence_deduction",
 				],
 			]
 		],
@@ -128,7 +145,11 @@ override_doctype_class = {
 # ------------
 
 # before_install = "upande_hr.install.before_install"
-# after_install = "upande_hr.install.after_install"
+after_install = "upande_hr.install.after_install"
+
+# Absence deduction Email Templates are created when missing, never overwritten, so HR
+# can edit the wording. A fixture would be re-imported with force=True on every migrate.
+after_migrate = ["upande_hr.attendance.absence_email_templates.ensure_email_templates"]
 
 # Uninstallation
 # ------------
@@ -181,15 +202,31 @@ before_uninstall = "upande_hr.install.before_uninstall"
 # Hook on document methods and events
 
 doc_events = {
+	"HR Settings": {
+		"validate": "upande_hr.attendance.absence_settings.validate_hr_settings",
+	},
+	"Leave Application": {
+		# Cancelling an auto-deducted Leave Application marks its Absence Leave
+		# Deduction row Reversed, so the day is never deducted again.
+		"on_cancel": "upande_hr.attendance.absent_deduction.on_leave_application_cancel",
+	},
 	"Attendance": {
 		# Runs after Attendance.validate(), so it gets the last word over
 		# check_leave_record() reassigning status back to "On Leave".
 		"validate": "upande_hr.overrides.attendance.reassert_comp_off_override"
-	}
+	},
 }
 
 # Scheduled Tasks
 # ---------------
+
+scheduler_events = {
+	"cron": {
+		# Sunday 23:59 - closes out the Monday-Sunday week. Gated on
+		# HR Settings.custom_enable_absent_al_deduction inside the job.
+		"59 23 * * 0": ["upande_hr.attendance.absent_deduction.run_weekly"],
+	},
+}
 
 # scheduler_events = {
 # 	"all": [

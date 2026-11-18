@@ -18,12 +18,26 @@ SETTINGS = "Extra Shift Compensation Settings"
 PRESENT = "Present"
 
 
+# Tried in order when the settings leave the Leave Type empty. Sites name it differently
+# (Altura live has "Compensatory Off"), so it is never a hard Link default: Frappe saves
+# every Single with its defaults on install, and a Link default naming a missing Leave
+# Type fails the whole install-app.
+DEFAULT_LEAVE_TYPES = ("Compensatory Off Day", "Compensatory Off")
+
+
+def get_default_leave_type():
+	for name in DEFAULT_LEAVE_TYPES:
+		if frappe.db.exists("Leave Type", name):
+			return name
+	return frappe.db.get_value("Leave Type", {"is_compensatory": 1}, "name", order_by="creation")
+
+
 def get_settings():
 	"""Settings singleton, falling back to the doctype defaults on a site where the
 	single has never been saved."""
 	settings = frappe.get_cached_doc(SETTINGS)
 	return frappe._dict(
-		leave_type=settings.leave_type or "Compensatory Off Day",
+		leave_type=settings.leave_type or get_default_leave_type(),
 		max_backdate_days=cint(settings.max_backdate_days) or 30,
 		overtime_overlap_action=settings.overtime_overlap_action or "Block",
 	)
@@ -52,6 +66,12 @@ class ExtraShiftCompensation(Document):
 
 	def on_submit(self):
 		settings = get_settings()
+		if not settings.leave_type:
+			frappe.throw(
+				_("Set the {0} in {1} first.").format(
+					frappe.bold(_("Leave Type")), get_link_to_form(SETTINGS, SETTINGS)
+				)
+			)
 		for row in self.entries:
 			if row.row_status != "Approved":
 				continue
