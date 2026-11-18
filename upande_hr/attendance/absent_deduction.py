@@ -38,6 +38,10 @@ Altura additions (settings in absence_settings.py, all on the HR Settings Upande
   setting decides: Skip and flag (row Flagged, nothing deducted) or Leave Without Pay
   (the day is booked against the LWP Leave Type instead).
 - run_absence_deduction() runs any date range, with a dry run that writes nothing.
+- Holidays are read exactly as auto-attendance reads them (get_holiday_list): the shift's
+  own Holiday List if it has one, else the employee's assignment on that date. MOD Roster
+  lists (mod_roster.py) reach this through the assignment, so a MOD's OFF duty day is
+  excused and a missed WD day is deducted.
 
 Notes on the Leave Application that gets created:
 
@@ -403,11 +407,9 @@ def plan(row, absence, settings, outages: dict | None = None):
 		).format(*outage)
 		return
 
-	if not get_holiday_list_for_employee(
-		absence.employee, raise_exception=False, as_on=absence.attendance_date
-	):
-		# HRMS v16 reads holidays only from Holiday List Assignment. Without one the day
-		# cannot be told apart from a weekly off, and HRMS would refuse the leave anyway.
+	if not get_holiday_list(absence.employee, absence.attendance_date, absence.shift):
+		# HRMS v16 reads holidays only from Holiday List Assignment (or the shift's own
+		# list). Without one the day cannot be told apart from a weekly off.
 		row.action, row.leave_type = ACTION_FLAG, leave_type
 		row.reason = f"{row.reason} " + _(
 			"No Holiday List Assignment for the employee or company on this date; nothing deducted."
@@ -484,7 +486,7 @@ def get_excuse(employee: str, date, settings=None, shift: str | None = None) -> 
 	):
 		return "Leave Application"
 
-	if is_holiday_on(employee, date):
+	if is_holiday_on(employee, date, shift):
 		return "Holiday / Weekly Off"
 
 	return None
@@ -583,13 +585,26 @@ def get_assigned_shift(employee: str, date) -> str | None:
 	return rows[0][0] if rows else None
 
 
-def is_holiday_on(employee: str, date) -> bool:
-	"""Holiday or weekly off on `date`, from the Holiday List Assignment in force *then*.
+def get_holiday_list(employee: str, date, shift: str | None = None) -> str | None:
+	"""The holiday list auto-attendance uses for this employee-date.
+
+	Same order as HRMS's ShiftType.get_holiday_list: the shift's own Holiday List when it
+	has one, else the employee's Holiday List Assignment in force on `date` (falling back
+	to the company's). Kept identical so that a day auto-attendance treats as a holiday is
+	never deducted, and a day it marks Absent is never wrongly excused.
+	"""
+	shift = resolve_shift(employee, date, shift)
+	shift_list = shift and frappe.db.get_value("Shift Type", shift, "holiday_list")
+	return shift_list or get_holiday_list_for_employee(employee, raise_exception=False, as_on=date)
+
+
+def is_holiday_on(employee: str, date, shift: str | None = None) -> bool:
+	"""Holiday or weekly off on `date`, from the list in force *then* (see get_holiday_list).
 
 	Not erpnext's is_holiday: that resolves the employee's list as of today, which is
 	wrong for a past day if their weekly-off pattern changed since.
 	"""
-	holiday_list = get_holiday_list_for_employee(employee, raise_exception=False, as_on=date)
+	holiday_list = get_holiday_list(employee, date, shift)
 	return bool(holiday_list) and bool(
 		frappe.db.exists("Holiday", {"parent": holiday_list, "holiday_date": date})
 	)

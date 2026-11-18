@@ -47,6 +47,7 @@ def get_columns():
 		},
 		{"label": _("Reason"), "fieldname": "reason", "fieldtype": "Small Text", "width": 300},
 		{"label": _("Notification"), "fieldname": "notification", "fieldtype": "Small Text", "width": 220},
+		{"label": _("MOD Roster"), "fieldname": "mod_roster_note", "fieldtype": "Small Text", "width": 260},
 		{
 			"label": _("Log"),
 			"fieldname": "name",
@@ -65,7 +66,7 @@ def get_data(filters):
 		conditions["absence_date"] = [">=", filters.from_date]
 	elif filters.to_date:
 		conditions["absence_date"] = ["<=", filters.to_date]
-	for field in ("employee", "status", "company"):
+	for field in ("employee", "status", "company", "mod_roster_conflict"):
 		if filters.get(field):
 			conditions[field] = filters.get(field)
 

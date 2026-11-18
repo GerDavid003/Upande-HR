@@ -1,0 +1,58 @@
+{
+ "actions": [],
+ "creation": "2026-11-18 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name",
+  "from_date",
+  "to_date"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "options": "Employee",
+   "label": "Employee",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "fetch_from": "employee.employee_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "First day on this group's rotation. The roster never changes days before today."
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "in_list_view": 1,
+   "description": "Last day on the rotation. Leave empty while they stay a MOD; from the next day they are back on their base holiday list."
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-18 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Upande Hr",
+ "name": "MOD Rotation Member",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

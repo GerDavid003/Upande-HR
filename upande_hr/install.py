@@ -17,6 +17,10 @@ def after_install():
 
 	ensure_email_templates()
 
+	from upande_hr.attendance.mod_roster import seed_settings
+
+	seed_settings()
+
 
 def set_comp_off_leave_type():
 	"""Conditional default for Extra Shift Compensation Settings.leave_type: stored only if a

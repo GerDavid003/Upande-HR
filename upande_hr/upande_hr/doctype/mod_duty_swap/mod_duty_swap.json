@@ -1,0 +1,156 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-11-18 00:00:00",
+ "description": "One duty day handed from a MOD rostered on duty to a MOD rostered off. Submitting (HR Manager) applies it to both holiday lists; cancelling restores both.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "date",
+  "reason",
+  "column_break_people",
+  "off_employee",
+  "off_employee_name",
+  "cover_employee",
+  "cover_employee_name",
+  "approved_by",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "HR-MDS-.YYYY.-",
+   "default": "HR-MDS-.YYYY.-",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Duty Date",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_people",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "off_employee",
+   "fieldtype": "Link",
+   "options": "Employee",
+   "label": "Going Off",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Rostered on duty; gets the day off."
+  },
+  {
+   "fieldname": "off_employee_name",
+   "fieldtype": "Data",
+   "label": "Going Off (Name)",
+   "fetch_from": "off_employee.employee_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cover_employee",
+   "fieldtype": "Link",
+   "options": "Employee",
+   "label": "Covering",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Rostered off; works the day instead."
+  },
+  {
+   "fieldname": "cover_employee_name",
+   "fieldtype": "Data",
+   "label": "Covering (Name)",
+   "fetch_from": "cover_employee.employee_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "options": "User",
+   "label": "Approved By",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "options": "MOD Duty Swap",
+   "label": "Amended From",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-11-18 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Upande Hr",
+ "name": "MOD Duty Swap",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "share": 1
+  },
+  {
+   "role": "HR Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "share": 1
+  },
+  {
+   "role": "HR User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "create": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "date",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "off_employee_name",
+ "track_changes": 1
+}

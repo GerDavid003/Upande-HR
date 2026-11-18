@@ -1,0 +1,127 @@
+{
+ "actions": [],
+ "autoname": "field:group_name",
+ "creation": "2026-11-18 00:00:00",
+ "description": "Managers on Duty who share a duty-weekday rotation. The roster is written into each member's own holiday list (MOD - <employee> - <year>).",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "group_name",
+  "is_active",
+  "column_break_rotation",
+  "cycle_weeks",
+  "duty_week",
+  "anchor_date",
+  "members_section",
+  "members"
+ ],
+ "fields": [
+  {
+   "fieldname": "group_name",
+   "fieldtype": "Data",
+   "label": "Group Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active",
+   "default": "1",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Unticked, its members are put back on their base holiday list from today."
+  },
+  {
+   "fieldname": "column_break_rotation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cycle_weeks",
+   "fieldtype": "Int",
+   "label": "Cycle (Weeks)",
+   "reqd": 1,
+   "default": "2",
+   "non_negative": 1,
+   "in_list_view": 1,
+   "description": "Length of the rotation. 2 = on duty every other duty weekday."
+  },
+  {
+   "fieldname": "duty_week",
+   "fieldtype": "Int",
+   "label": "Duty Week",
+   "reqd": 1,
+   "default": "1",
+   "non_negative": 1,
+   "in_list_view": 1,
+   "description": "Which week of the cycle this group is on duty (1 to Cycle)."
+  },
+  {
+   "fieldname": "anchor_date",
+   "fieldtype": "Date",
+   "label": "Anchor Date",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "A duty weekday (HR Settings > Upande > MOD Roster) that starts week 1 of the cycle."
+  },
+  {
+   "fieldname": "members_section",
+   "fieldtype": "Section Break",
+   "label": "Members"
+  },
+  {
+   "fieldname": "members",
+   "fieldtype": "Table",
+   "options": "MOD Rotation Member",
+   "label": "Members"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-18 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Upande Hr",
+ "name": "MOD Rotation Group",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 1,
+   "share": 1
+  },
+  {
+   "role": "HR Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 1,
+   "share": 1
+  },
+  {
+   "role": "HR User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "group_name",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "group_name",
+ "track_changes": 1
+}

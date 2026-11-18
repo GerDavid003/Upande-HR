@@ -33,11 +33,18 @@ frappe.query_reports["Absence Leave Deductions"] = {
 			fieldtype: "Link",
 			options: "Company",
 		},
+		{
+			fieldname: "mod_roster_conflict",
+			label: __("Now a MOD Off Day"),
+			fieldtype: "Check",
+		},
 	],
 	formatter(value, row, column, data, default_formatter) {
 		value = default_formatter(value, row, column, data);
 		if (column.fieldname === "status" && data) {
-			const color = { Deducted: "green", Flagged: "orange", Reversed: "gray", Error: "red" }[data.status];
+			const color = { Deducted: "green", Flagged: "orange", Reversed: "gray", Error: "red" }[
+				data.status
+			];
 			if (color) value = `<span class="indicator-pill ${color}">${value}</span>`;
 		}
 		return value;

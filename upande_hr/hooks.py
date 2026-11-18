@@ -114,8 +114,7 @@ fixtures = [
 					"HR Settings-custom_enable_absent_al_deduction",
 					"Leave Application-custom_auto_deducted",
 					# Altura additions to the Absent Deduction section, one linear anchor
-					# chain off custom_enable_absent_al_deduction. The next section on this
-					# tab (MOD Off) anchors on custom_notify_employee_on_absence_deduction.
+					# chain off custom_enable_absent_al_deduction.
 					"HR Settings-custom_absence_deduction_grades",
 					"HR Settings-custom_absence_deduction_exempt_employees",
 					"HR Settings-custom_absence_deduction_leave_type",
@@ -124,6 +123,13 @@ fixtures = [
 					"HR Settings-custom_absence_on_insufficient_balance",
 					"HR Settings-custom_absence_lwp_leave_type",
 					"HR Settings-custom_notify_employee_on_absence_deduction",
+					# MOD Roster section, after the last Absent Deduction field.
+					"HR Settings-custom_mod_roster_section",
+					"HR Settings-custom_enable_mod_roster",
+					"HR Settings-custom_mod_duty_weekday",
+					"HR Settings-custom_mod_generate_weeks_ahead",
+					"HR Settings-custom_mod_min_on_duty",
+					"Holiday List Assignment-custom_mod_roster",
 				],
 			]
 		],
@@ -203,7 +209,21 @@ before_uninstall = "upande_hr.install.before_uninstall"
 
 doc_events = {
 	"HR Settings": {
-		"validate": "upande_hr.attendance.absence_settings.validate_hr_settings",
+		"validate": [
+			"upande_hr.attendance.absence_settings.validate_hr_settings",
+			"upande_hr.attendance.mod_roster.validate_hr_settings",
+		],
+	},
+	# MOD Roster: the roster owns an active MOD's employee-level assignments, and keeps
+	# their lists in step with the base list (Employee.holiday_list or an assignment).
+	"Holiday List Assignment": {
+		"validate": "upande_hr.attendance.mod_roster.validate_holiday_list_assignment",
+	},
+	"Holiday List": {
+		"on_update": "upande_hr.attendance.mod_roster.on_holiday_list_update",
+	},
+	"Employee": {
+		"on_update": "upande_hr.attendance.mod_roster.on_employee_update",
 	},
 	"Leave Application": {
 		# Cancelling an auto-deducted Leave Application marks its Absence Leave
@@ -226,6 +246,9 @@ scheduler_events = {
 		# HR Settings.custom_enable_absent_al_deduction inside the job.
 		"59 23 * * 0": ["upande_hr.attendance.absent_deduction.run_weekly"],
 	},
+	# MOD Roster: extend the lists, cover warning and next-year check. Gated on
+	# HR Settings.custom_enable_mod_roster inside the job.
+	"daily": ["upande_hr.attendance.mod_roster.run_daily"],
 }
 
 # scheduler_events = {

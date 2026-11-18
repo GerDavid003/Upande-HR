@@ -187,6 +187,41 @@ class TestAbsentDeduction(IntegrationTestCase):
 		mark_absent(self.employee, HOLIDAY)
 		self.assert_excused(HOLIDAY, "Holiday / Weekly Off")
 
+	def test_shift_holiday_list_wins_like_auto_attendance(self):
+		"""HRMS auto-attendance uses Shift Type.holiday_list before the employee's list."""
+		shift_list = frappe.get_doc(
+			{
+				"doctype": "Holiday List",
+				"holiday_list_name": "_Test ALD Shift Holidays",
+				"from_date": add_days(START, -30),
+				"to_date": add_days(today(), 30),
+				"holidays": [{"holiday_date": WEDNESDAY, "description": "Shift holiday", "weekly_off": 0}],
+			}
+		).insert()
+		shift = frappe.get_doc(
+			{
+				"doctype": "Shift Type",
+				"__newname": "_Test ALD Shift With List",
+				"start_time": "07:00:00",
+				"end_time": "16:00:00",
+				"holiday_list": shift_list.name,
+			}
+		).insert()
+		assign_shift(self.employee, shift.name, START)
+		mark_absent(self.employee, WEDNESDAY)
+		mark_absent(self.employee, HOLIDAY)  # a holiday in the employee's list only
+		result = self.run_week(dry_run=1)
+		[wed] = self.rows_for(result, self.employee, WEDNESDAY)
+		[thu] = self.rows_for(result, self.employee, HOLIDAY)
+		self.assertEqual((wed.action, wed.reason), (ad.ACTION_EXCUSED, "Holiday / Weekly Off"))
+		self.assertEqual(thu.action, ad.ACTION_DEDUCT)  # auto-attendance would mark it Absent too
+
+		# With the shift's own list, no Holiday List Assignment is needed.
+		frappe.db.delete("Holiday List Assignment", {"assigned_to": self.employee})
+		mark_absent(self.employee, FRIDAY)
+		[fri] = self.rows_for(self.run_week(dry_run=1), self.employee, FRIDAY)
+		self.assertEqual(fri.action, ad.ACTION_DEDUCT)
+
 	def test_gate_pass_excluded(self):
 		if not frappe.db.exists("DocType", "Gate Pass"):
 			self.skipTest("No Gate Pass doctype on this site")

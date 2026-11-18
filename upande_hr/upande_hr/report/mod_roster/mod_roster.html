@@ -1,0 +1,28 @@
+<h3 style="margin-bottom: 4px;">{%= __("MOD Roster") %}</h3>
+<p style="margin-top: 0;">
+	{%= frappe.datetime.str_to_user(filters.from_date) %} &ndash; {%= frappe.datetime.str_to_user(filters.to_date) %}
+	{% if (filters.group) { %} &middot; {%= filters.group %}{% } %}
+</p>
+<table class="table table-bordered" style="font-size: 11px;">
+	<thead>
+		<tr>
+			<th style="width: 22%;">{%= __("Name") %}</th>
+			{% for (var i = 0; i < 7; i++) { %}<th style="text-align: center;">{%= columns[3 + i].label %}</th>{% } %}
+		</tr>
+	</thead>
+	<tbody>
+		{% for (var r = 0; r < data.length; r++) { var row = data[r]; %}
+		<tr {% if (row.is_header) { %}style="background: #f3f3f3; font-weight: bold;"{% } else if (row.is_total) { %}style="font-weight: bold;"{% } %}>
+			<td>{%= row.employee_name || "" %}</td>
+			{% for (var i = 0; i < 7; i++) { var v = row["d" + i]; %}
+			<td style="text-align: center;">{%= (v === undefined || v === null) ? "" : v %}</td>
+			{% } %}
+		</tr>
+		{% } %}
+	</tbody>
+</table>
+<p style="font-size: 10px;">
+	D = {%= __("day") %}, WD = {%= __("weekend duty") %}, OFF = {%= __("MOD off") %}, WO = {%= __("weekly off") %},
+	PH = {%= __("public holiday") %}, L = {%= __("approved leave") %}, * = {%= __("changed by a duty swap") %},
+	! = {%= __("no base holiday list: the roster is not applied and the day counts as a working day") %}
+</p>
