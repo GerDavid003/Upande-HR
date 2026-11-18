@@ -1,6 +1,21 @@
 import frappe
 
 MODULE = "Upande Hr"
+DEFAULT_REMINDER_DAYS = (30, 14, 7, 0)
+
+
+def after_install():
+	set_default_reminder_days()
+
+
+def set_default_reminder_days():
+	"""Seed the default reminder points, only if none are configured."""
+	settings = frappe.get_single("Upande HR Settings")
+	if settings.contract_reminder_days:
+		return
+	for days in DEFAULT_REMINDER_DAYS:
+		settings.append("contract_reminder_days", {"days_before": days})
+	settings.save(ignore_permissions=True)
 
 
 def before_uninstall():

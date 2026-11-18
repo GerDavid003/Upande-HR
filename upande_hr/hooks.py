@@ -133,7 +133,7 @@ override_doctype_class = {
 # ------------
 
 # before_install = "upande_hr.install.before_install"
-# after_install = "upande_hr.install.after_install"
+after_install = "upande_hr.install.after_install"
 
 # Uninstallation
 # ------------
