@@ -6,6 +6,9 @@ DEFAULT_REMINDER_DAYS = (30, 14, 7, 0)
 
 def after_install():
 	set_default_reminder_days()
+	from upande_hr.contracts.backfill import backfill_contracts
+
+	backfill_contracts()
 
 
 def set_default_reminder_days():
