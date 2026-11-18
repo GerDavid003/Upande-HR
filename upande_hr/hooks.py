@@ -112,7 +112,8 @@ after_install = "upande_hr.install.after_install"
 # ------------
 
 before_uninstall = "upande_hr.install.before_uninstall"
-# after_uninstall = "upande_hr.uninstall.after_uninstall"
+
+after_uninstall = "upande_hr.install.after_uninstall"
 
 # Integration Setup
 # ------------------
