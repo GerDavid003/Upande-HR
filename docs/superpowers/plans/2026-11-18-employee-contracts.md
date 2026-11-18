@@ -200,15 +200,15 @@
 ### Task 7: Uninstall cleanup and end-to-end verification
 
 **Files:**
-- Modify: `upande_hr/install.py` (`before_uninstall`)
+- Modify: `upande_hr/install.py` (`before_uninstall`, `after_uninstall`)
 
 **Interfaces:**
 - Consumes: existing `before_uninstall` (custom fields + column drop).
-- Adds to `before_uninstall`: delete `Notification Log` where `document_type = "Employee Contract"`; delete `Scheduled Job Type` where `method like "upande_hr.%"`; delete `Email Queue` rows where `reference_doctype = "Employee Contract"` and status Not Sent. (Doctypes/tables/single values are dropped by `remove_app` itself.)
+- `before_uninstall` performs NO writes and NO DDL (Frappe runs it even for `--dry-run`); it only records which custom-field columns to drop. All destructive work happens in `after_uninstall`, and only when `upande_hr` is no longer in installed apps (a real uninstall). It deletes app-generated records (Notification Log, Email Queue + recipients, Scheduled Job Type/Log, Custom DocPerm, Property Setter, File, Version, Comment, ToDo, DocShare, naming Series, Error Log), drops the custom columns, then calls `frappe.db.commit()` because `remove_app` commits before `after_uninstall` and `bench` does not commit afterwards. (Doctypes/tables/single values are dropped by `remove_app` itself.)
 
-- [ ] **Step 1: Write failing test** `test_before_uninstall_removes_contract_artifacts` in `contracts/test_reminders.py`: create a Notification Log for a contract; stub `frappe.db.sql_ddl` to a list; call `before_uninstall()`; assert Notification Log gone, Scheduled Job Type count for `upande_hr.%` == 0; rollback.
+- [ ] **Step 1: Write failing test** `test_real_uninstall_cleans_up` / `test_dry_run_uninstall_changes_nothing` in `contracts/test_reminders.py`: create a Notification Log for a contract; stub `frappe.db.sql_ddl` and `frappe.db.commit`; call `before_uninstall()` then `after_uninstall()` (patch the installed-apps check); assert Notification Log gone, Scheduled Job Type count for `upande_hr.%` == 0; rollback.
 - [ ] **Step 2: Run** → FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run all app tests**: `bench --site otieno.local run-tests --app upande_hr` → all PASS.
-- [ ] **Step 5: Dry-run uninstall**: `bench --site otieno.local uninstall-app upande_hr --dry-run` → output lists the four new doctypes (Employee Contract, Upande HR Settings, Contract Reminder Day, Contract Reminder Recipient) alongside Employee Separation Type and Family Tree.
+- [ ] **Step 5: Uninstall verification**: do NOT run `bench uninstall-app` / `remove-app` in any form. Frappe runs `before_uninstall` and `after_uninstall` even on `--dry-run`, which can destroy data. Verify via the stubbed tests in Step 1 only.
 - [ ] **Step 6: Commit** `feat: remove contract artifacts on uninstall`

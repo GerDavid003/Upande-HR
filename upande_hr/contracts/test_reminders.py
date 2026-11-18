@@ -3,7 +3,7 @@ from frappe.utils import add_days, today
 from hrms.hr.doctype.attendance_request.test_attendance_request import get_employee
 from hrms.tests.utils import HRMSTestSuite
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from upande_hr.contracts.reminders import (
 	due_point,
@@ -230,6 +230,16 @@ class TestContractReminders(HRMSTestSuite):
 		self.assertEqual(self.email_count(c2), 1)
 		self.assertEqual(frappe.db.get_value("Employee Contract", c2.name, "last_reminder_days"), 14)
 
+	def test_subject_singular_for_one_day(self):
+		make_user("rem_a@example.com", ["Test Contract Role X"])
+		self.set_settings(roles=["Test Contract Role X"], points=(1,))
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 1))
+		send_contract_reminders()
+		subject = frappe.db.get_value(
+			"Notification Log", {"document_type": "Employee Contract", "document_name": c.name}, "subject"
+		)
+		self.assertTrue(subject.startswith("Contract ending in 1 day:"), subject)
+
 	def test_email_body_escaped(self):
 		make_user("rem_a@example.com", ["Test Contract Role X"])
 		self.set_settings(roles=["Test Contract Role X"])
@@ -247,7 +257,10 @@ class TestContractReminders(HRMSTestSuite):
 
 		ddl = []
 		original = frappe.db.sql_ddl
+		original_commit = frappe.db.commit
 		frappe.db.sql_ddl = lambda sql, *a, **kw: ddl.append(sql)
+		self.commit_mock = MagicMock()
+		frappe.db.commit = self.commit_mock
 		self.addCleanup(frappe.db.rollback)
 		try:
 			with patch.object(install, "_app_installed", return_value=installed):
@@ -255,6 +268,7 @@ class TestContractReminders(HRMSTestSuite):
 				install.after_uninstall()
 		finally:
 			frappe.db.sql_ddl = original
+			frappe.db.commit = original_commit
 		return ddl
 
 	def _make_log(self):
@@ -269,18 +283,79 @@ class TestContractReminders(HRMSTestSuite):
 				"document_name": c.name,
 			}
 		).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "Property Setter",
+				"doc_type": "Employee Contract",
+				"property": "max_attachments",
+				"property_type": "Int",
+				"value": "3",
+				"doctype_or_field": "DocType",
+			}
+		).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "Comment",
+				"comment_type": "Info",
+				"reference_doctype": "Employee Contract",
+				"reference_name": c.name,
+				"content": "x",
+			}
+		).insert(ignore_permissions=True)
+		eq = frappe.get_doc(
+			{
+				"doctype": "Email Queue",
+				"reference_doctype": "Employee Contract",
+				"reference_name": c.name,
+				"sender": "a@example.com",
+				"message": "x",
+				"status": "Sent",
+				"recipients": [{"recipient": "b@example.com"}],
+			}
+		).insert(ignore_permissions=True)
+		self.eq_name = eq.name
+		f = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": "contract_uninstall_test.txt",
+				"content": "hello",
+				"attached_to_doctype": "Employee Contract",
+				"attached_to_name": c.name,
+				"is_private": 1,
+			}
+		).insert(ignore_permissions=True)
+		self.file_name = f.name
+		frappe.get_doc(
+			{"doctype": "Error Log", "method": "Contract reminder failed: X", "error": "x"}
+		).insert(ignore_permissions=True)
+		frappe.db.sql("insert into `tabSeries` (name, current) values ('HR-CON-2099-', 5) on duplicate key update current=5")
+
+	def _leftovers(self):
+		return {
+			"property_setter": frappe.db.exists("Property Setter", {"doc_type": "Employee Contract"}),
+			"comment": frappe.db.exists("Comment", {"reference_doctype": "Employee Contract"}),
+			"email_queue": frappe.db.exists("Email Queue", {"reference_doctype": "Employee Contract"}),
+			"email_recipient": frappe.db.exists("Email Queue Recipient", {"parent": self.eq_name}),
+			"file": frappe.db.exists("File", {"attached_to_doctype": "Employee Contract"}),
+			"error_log": frappe.db.exists("Error Log", {"method": ["like", "Contract reminder failed%"]}),
+			"series": frappe.db.exists("Series", {"name": ["like", "HR-CON-%"]}),
+		}
 
 	def test_dry_run_uninstall_changes_nothing(self):
 		self._make_log()
 		before = frappe.db.count("Custom Field", {"module": "Upande Hr"})
 		ddl = self._run_uninstall(installed=True)
 		self.assertEqual(ddl, [])
+		self.commit_mock.assert_not_called()
 		self.assertEqual(frappe.db.count("Custom Field", {"module": "Upande Hr"}), before)
 		self.assertTrue(frappe.db.exists("Notification Log", {"document_type": "Employee Contract"}))
+		self.assertTrue(all(self._leftovers().values()), self._leftovers())
 
 	def test_real_uninstall_cleans_up(self):
 		self._make_log()
+		self.assertTrue(all(self._leftovers().values()), self._leftovers())
 		ddl = self._run_uninstall(installed=False)
+		self.commit_mock.assert_called()
 		dropped = {s.split("DROP COLUMN")[1].strip(" `") for s in ddl}
 		self.assertEqual(dropped, {
 				"reason_for_exit", "national_id", "tax_id", "nssf_no", "sha_no",
@@ -289,3 +364,4 @@ class TestContractReminders(HRMSTestSuite):
 		)
 		self.assertFalse(frappe.db.exists("Notification Log", {"document_type": "Employee Contract"}))
 		self.assertEqual(frappe.db.count("Scheduled Job Type", {"method": ["like", "upande_hr.%"]}), 0)
+		self.assertFalse(any(self._leftovers().values()), self._leftovers())

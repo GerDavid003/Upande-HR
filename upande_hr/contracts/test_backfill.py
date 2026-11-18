@@ -43,6 +43,16 @@ class TestBackfill(HRMSTestSuite):
 		self.assertEqual(len(rows), 1)
 		self.assertEqual(rows[0].status, "Expired")
 
+	def test_backfill_keeps_manual_final_confirmation(self):
+		self._set(final_confirmation_date="2025-05-05", contract_end_date=add_days(today(), -10))
+		backfill_contracts()
+		emp = frappe.db.get_value(
+			"Employee", self.name, ["final_confirmation_date", "contract_end_date", "employment_type"], as_dict=True
+		)
+		self.assertEqual(getdate(emp.final_confirmation_date), getdate("2025-05-05"))
+		self.assertEqual(getdate(emp.contract_end_date), getdate(add_days(today(), -10)))
+		self.assertEqual(emp.employment_type, "Contract")
+
 	def test_backfill_idempotent(self):
 		backfill_contracts()
 		backfill_contracts()

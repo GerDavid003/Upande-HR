@@ -181,6 +181,60 @@ class TestEmployeeContract(HRMSTestSuite):
 		self.assertEqual(self._emp("employment_type"), "Probation")
 		self.assertIsNone(self._emp("final_confirmation_date"))
 
+	def test_manual_final_confirmation_survives_submit(self):
+		frappe.db.set_value("Employee", self.employee.name, "final_confirmation_date", "2025-05-05")
+		make_contract(self.employee.name, "2026-01-01", "2026-03-31")
+		self.assertEqual(getdate(self._emp("final_confirmation_date")), getdate("2025-05-05"))
+
+	def test_amended_old_contract_does_not_become_latest(self):
+		e = self.employee.name
+		c1 = make_contract(e, "2026-01-01", "2026-03-31", employment_type="Probation")
+		c2 = make_contract(e, "2026-04-01", "2026-06-30")
+		c1.cancel()
+		amended = make_contract(
+			e, "2026-01-01", "2026-03-31", employment_type="Probation", amended_from=c1.name
+		)
+		self.assertEqual(getdate(self._emp("contract_end_date")), getdate("2026-06-30"))
+		self.assertEqual(self._emp("employment_type"), "Contract")
+		confirm_as_permanent(c2.name, "2026-07-01", "Full-time")
+		self.assertEqual(self._status(c2), "Confirmed")
+
+	def test_renew_from_expired(self):
+		c1 = make_contract(self.employee.name, "2026-01-01", "2026-03-31")
+		frappe.db.set_value("Employee Contract", c1.name, "status", "Expired")
+		d = make_renewal(c1.name)
+		d.update({"end_date": "2026-06-30"})
+		c2 = frappe.get_doc(d).insert()
+		c2.submit()
+		self.assertEqual(self._status(c1), "Renewed")
+
+	def test_renew_non_latest_refused(self):
+		c1, c2 = self._two()
+		frappe.db.set_value("Employee Contract", c1.name, "status", "Active")
+		with self.assertRaises(frappe.ValidationError):
+			make_renewal(c1.name)
+
+	def test_confirm_before_start_rejected(self):
+		c1, c2 = self._two()
+		with self.assertRaises(frappe.ValidationError):
+			confirm_as_permanent(c2.name, "2026-03-31", "Full-time")
+
+	def test_confirm_left_employee_rejected(self):
+		c1, c2 = self._two()
+		frappe.db.set_value("Employee", self.employee.name, "status", "Left")
+		with self.assertRaises(frappe.ValidationError):
+			confirm_as_permanent(c2.name, "2026-07-01", "Full-time")
+
+	def test_confirm_adds_comment(self):
+		c1, c2 = self._two()
+		confirm_as_permanent(c2.name, "2026-07-01", "Full-time")
+		self.assertTrue(
+			frappe.db.exists(
+				"Comment",
+				{"reference_doctype": "Employee Contract", "reference_name": c2.name, "comment_type": "Info"},
+			)
+		)
+
 	def test_cancel_only_contract_leaves_employee(self):
 		c1 = make_contract(self.employee.name, "2026-01-01", "2026-03-31")
 		before = (self._emp("contract_end_date"), self._emp("employment_type"))

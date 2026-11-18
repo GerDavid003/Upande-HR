@@ -4,6 +4,8 @@ import frappe
 
 MODULE = "Upande Hr"
 DEFAULT_REMINDER_DAYS = (30, 14, 7, 0)
+CONTRACT = "Employee Contract"
+APP_DOCTYPES = (CONTRACT, "Upande HR Settings", "Contract Reminder Day", "Contract Reminder Recipient")
 
 
 def after_install():
@@ -38,7 +40,8 @@ def before_uninstall():
 
 
 def _app_installed():
-	# read fresh from the DB, not from a cache
+	# get_global goes through the defaults cache, which remove_from_installed_apps clears
+	# during a real uninstall, so this reflects the post-removal state.
 	return "upande_hr" in json.loads(frappe.db.get_global("installed_apps") or "[]")
 
 
@@ -51,10 +54,44 @@ def after_uninstall():
 		_drop_column(dt, fieldname)
 		frappe.clear_cache(doctype=dt)
 
-	frappe.db.delete("Notification Log", {"document_type": "Employee Contract"})
-	frappe.db.delete("Scheduled Job Type", {"method": ["like", "upande_hr.%"]})
-	frappe.db.delete("Email Queue", {"reference_doctype": "Employee Contract", "status": "Not Sent"})
+	_delete_app_records()
+	frappe.db.commit()  # nosemgrep
+	# remove_app commits before running after_uninstall and bench ends with frappe.destroy()
+	# (no commit), so without this the deletes above would be rolled back.
 	frappe.clear_cache()
+
+
+def _delete_app_records():
+	doctypes = list(APP_DOCTYPES)
+
+	frappe.db.delete("Custom DocPerm", {"parent": ["in", doctypes]})
+	frappe.db.delete("Property Setter", {"doc_type": ["in", doctypes]})
+
+	for name in frappe.get_all("File", {"attached_to_doctype": CONTRACT}, pluck="name"):
+		try:
+			frappe.delete_doc("File", name, force=True, ignore_permissions=True)
+		except Exception:
+			# e.g. the file is already missing on disk; still remove the record
+			frappe.db.delete("File", {"name": name})
+
+	frappe.db.delete("Version", {"ref_doctype": CONTRACT})
+	frappe.db.delete("Comment", {"reference_doctype": CONTRACT})
+	frappe.db.delete("ToDo", {"reference_type": CONTRACT})
+	frappe.db.delete("DocShare", {"share_doctype": CONTRACT})
+	frappe.db.delete("Notification Log", {"document_type": CONTRACT})
+
+	queue = frappe.get_all("Email Queue", {"reference_doctype": CONTRACT}, pluck="name")
+	if queue:
+		frappe.db.delete("Email Queue Recipient", {"parent": ["in", queue]})
+		frappe.db.delete("Email Queue", {"name": ["in", queue]})
+
+	job_types = frappe.get_all("Scheduled Job Type", {"method": ["like", "upande_hr.%"]}, pluck="name")
+	if job_types:
+		frappe.db.delete("Scheduled Job Log", {"scheduled_job_type": ["in", job_types]})
+		frappe.db.delete("Scheduled Job Type", {"name": ["in", job_types]})
+
+	frappe.db.delete("Series", {"name": ["like", "HR-CON-%"]})
+	frappe.db.delete("Error Log", {"method": ["like", "Contract reminder failed%"]})
 
 
 def _drop_column(doctype, fieldname):

@@ -2,7 +2,7 @@ frappe.ui.form.on("Employee Contract", {
 	refresh(frm) {
 		if (frm.doc.docstatus !== 1) return;
 
-		if (frm.doc.status === "Active" && frappe.model.can_create("Employee Contract")) {
+		if (["Active", "Expired"].includes(frm.doc.status) && frm.doc.__onload && frm.doc.__onload.is_latest && frappe.model.can_create("Employee Contract")) {
 			frm.add_custom_button(__("Renew"), () => {
 				frappe.call({
 					method: "upande_hr.upande_hr.doctype.employee_contract.employee_contract.make_renewal",
@@ -17,7 +17,7 @@ frappe.ui.form.on("Employee Contract", {
 			});
 		}
 
-		if (["Active", "Expired"].includes(frm.doc.status) && frm.perm[0] && frm.perm[0].submit) {
+		if (["Active", "Expired"].includes(frm.doc.status) && frm.doc.__onload && frm.doc.__onload.is_latest && frm.perm[0] && frm.perm[0].submit) {
 			frm.add_custom_button(__("Confirm as Permanent"), () => frm.trigger("confirm_as_permanent"));
 		}
 	},
