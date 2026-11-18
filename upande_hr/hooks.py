@@ -193,7 +193,10 @@ doc_events = {
 		"validate": "upande_hr.overrides.attendance.reassert_comp_off_override"
 	},
 	"Employee": {
-		"validate": "upande_hr.overrides.employee.validate_reason_for_exit",
+		"validate": [
+			"upande_hr.overrides.employee.validate_reason_for_exit",
+			"upande_hr.overrides.employee.validate_family_tree_upi",
+		],
 	},
 }
 
