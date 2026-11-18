@@ -17,6 +17,7 @@ class EmployeeContract(Document):
 		self.set_end_date_from_duration()
 		self.validate_dates()
 		self.validate_employee()
+		self.validate_previous_contract()
 		self.validate_not_confirmed()
 		self.validate_overlap()
 
@@ -60,15 +61,22 @@ class EmployeeContract(Document):
 			frappe.throw(_("Start Date cannot be before the Employee's Date of Joining ({0})").format(joining))
 
 	def validate_employee(self):
-		if self.docstatus != 0:
+		if self._action == "update_after_submit":
 			return
 		if frappe.db.get_value("Employee", self.employee, "status") == "Left":
 			frappe.throw(_("Cannot create a contract for an employee who has left"))
 
-	def validate_not_confirmed(self):
-		if self.docstatus != 0:
+	def validate_previous_contract(self):
+		if not self.previous_contract:
 			return
-		if has_confirmed_contract(self.employee):
+		prev_employee = frappe.db.get_value("Employee Contract", self.previous_contract, "employee")
+		if prev_employee != self.employee:
+			frappe.throw(_("Previous Contract must belong to the same Employee"))
+
+	def validate_not_confirmed(self):
+		if self._action == "update_after_submit":
+			return
+		if has_confirmed_contract(self.employee, exclude=self.name):
 			frappe.throw(_("Employee already has a Confirmed contract; no further contracts can be created"))
 
 	def validate_overlap(self):
@@ -89,14 +97,20 @@ class EmployeeContract(Document):
 			frappe.throw(_("Contract dates overlap with {0}").format(overlap))
 
 
-def has_confirmed_contract(employee):
-	return bool(frappe.db.exists("Employee Contract", {"employee": employee, "docstatus": 1, "status": "Confirmed"}))
+def has_confirmed_contract(employee, exclude=None):
+	return bool(
+		frappe.db.exists(
+			"Employee Contract",
+			{"employee": employee, "docstatus": 1, "status": "Confirmed", "name": ["!=", exclude or ""]},
+		)
+	)
 
 
 @frappe.whitelist()
 def make_renewal(source_name: str) -> dict:
-	source = frappe.get_doc("Employee Contract", source_name)
 	frappe.has_permission("Employee Contract", "create", throw=True)
+	frappe.has_permission("Employee Contract", "read", source_name, throw=True)
+	source = frappe.get_doc("Employee Contract", source_name)
 	if source.docstatus != 1 or source.status != "Active":
 		frappe.throw(_("Only an Active contract can be renewed"))
 	if has_confirmed_contract(source.employee):
