@@ -47,7 +47,7 @@ def mark_expired_contracts(on_date=None):
 		filters={"status": "Active", "docstatus": 1, "end_date": ["<", on_date]},
 		pluck="name",
 	):
-		frappe.db.set_value("Employee Contract", name, "status", "Expired")
+		frappe.db.set_value("Employee Contract", name, "status", "Expired", update_modified=False)
 
 
 def get_recipients(contract):
@@ -133,14 +133,14 @@ def _process_contract(c, points, on_date):
 	recipients = get_recipients(c)
 	subject = message = None
 	if recipients:
-		prefix = "Contract ends today" if days_left == 0 else f"Contract ending in {days_left} days"
+		prefix = "Contract ends today" if days_left == 0 else f"Contract ending in {days_left} day{'s' if days_left != 1 else ''}"
 		subject = f"{prefix}: {c.employee_name} ({c.employee}), contract #{c.contract_number}"
 		link = get_url_to_form("Employee Contract", c.name)
 		message = frappe.render_template(EMAIL_TEMPLATE, {**c, "start_date": formatdate(c.start_date), "end_date": formatdate(c.end_date), "days_left": days_left, "link": link})
 
 	# bookkeeping and logs first, sendmail last: if anything fails the savepoint rolls
 	# everything back, so the reminder is retried next run without a duplicate.
-	frappe.db.set_value("Employee Contract", c.name, "last_reminder_days", _encode_last(p))
+	frappe.db.set_value("Employee Contract", c.name, "last_reminder_days", _encode_last(p), update_modified=False)
 	for user in recipients:
 		frappe.get_doc(
 			{
