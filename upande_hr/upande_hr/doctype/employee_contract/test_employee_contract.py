@@ -186,3 +186,26 @@ class TestEmployeeContract(HRMSTestSuite):
 		before = (self._emp("contract_end_date"), self._emp("employment_type"))
 		c1.cancel()
 		self.assertEqual((self._emp("contract_end_date"), self._emp("employment_type")), before)
+
+	def test_submit_draft_after_confirmed_rejected(self):
+		c1, c2 = self._two()
+		d = make_renewal(c2.name)
+		d.update({"end_date": "2026-09-30"})
+		c3 = frappe.get_doc(d).insert()
+		confirm_as_permanent(c2.name, "2026-07-01", "Full-time")
+		with self.assertRaises(frappe.ValidationError):
+			c3.submit()
+
+	def test_submit_draft_for_left_employee_rejected(self):
+		c = make_contract(self.employee.name, "2026-01-01", "2026-03-31", submit=False)
+		frappe.db.set_value("Employee", self.employee.name, "status", "Left")
+		with self.assertRaises(frappe.ValidationError):
+			c.submit()
+
+	def test_previous_contract_must_match_employee(self):
+		c1 = make_contract(self.employee.name, "2026-01-01", "2026-03-31")
+		other = frappe.get_all("Employee", filters={"name": ["!=", self.employee.name]}, limit=1, pluck="name")
+		if not other:
+			self.skipTest("no second employee")
+		with self.assertRaises(frappe.ValidationError):
+			make_contract(other[0], "2026-04-01", "2026-06-30", submit=False, previous_contract=c1.name)
