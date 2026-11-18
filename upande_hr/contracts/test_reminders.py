@@ -3,6 +3,8 @@ from frappe.utils import add_days, today
 from hrms.hr.doctype.attendance_request.test_attendance_request import get_employee
 from hrms.tests.utils import HRMSTestSuite
 
+from unittest.mock import patch
+
 from upande_hr.contracts.reminders import (
 	due_point,
 	get_recipients,
@@ -180,3 +182,62 @@ class TestContractReminders(HRMSTestSuite):
 		send_contract_reminders()
 		self.assertEqual(self.email_count(c), 0)
 		self.assertFalse(frappe.db.get_value("Employee Contract", c.name, "last_reminder_days"))
+
+	def test_company_permission_for_other_doctype_ignored(self):
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		other = frappe.get_all("Company", filters={"name": ["!=", c.company]}, pluck="name", limit=1)[0]
+		u = make_user("rem_g@example.com", ["Test Contract Role X"])
+		frappe.get_doc(
+			{
+				"doctype": "User Permission",
+				"user": u,
+				"allow": "Company",
+				"for_value": other,
+				"apply_to_all_doctypes": 0,
+				"applicable_for": "Leave Application",
+			}
+		).insert()
+		self.set_settings(roles=["Test Contract Role X"])
+		self.assertIn(u, get_recipients(c))
+
+	def test_one_failing_contract_does_not_abort(self):
+		make_user("rem_a@example.com", ["Test Contract Role X"])
+		self.set_settings(roles=["Test Contract Role X"])
+		c1 = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		emp2 = frappe.get_doc(
+			{
+				"doctype": "Employee",
+				"first_name": "Rem Second",
+				"gender": "Female",
+				"date_of_birth": "1985-01-01",
+				"date_of_joining": "2019-01-01",
+				"company": self.employee.company,
+			}
+		).insert()
+		frappe.db.set_value("Employee", emp2.name, {"date_of_joining": "2020-01-01", "status": "Active"})
+		c2 = make_contract(emp2.name, add_days(today(), -30), add_days(today(), 10))
+		real = frappe.sendmail
+
+		def flaky(*a, **kw):
+			if kw.get("reference_name") == c1.name:
+				raise Exception("boom")
+			return real(*a, **kw)
+
+		with patch("upande_hr.contracts.reminders.frappe.sendmail", side_effect=flaky):
+			send_contract_reminders()
+		self.assertEqual(self.email_count(c1), 0)
+		self.assertFalse(frappe.db.get_value("Employee Contract", c1.name, "last_reminder_days"))
+		self.assertEqual(self.email_count(c2), 1)
+		self.assertEqual(frappe.db.get_value("Employee Contract", c2.name, "last_reminder_days"), 14)
+
+	def test_email_body_escaped(self):
+		make_user("rem_a@example.com", ["Test Contract Role X"])
+		self.set_settings(roles=["Test Contract Role X"])
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		frappe.db.set_value("Employee Contract", c.name, "employee_name", "<b>x</b>")
+		send_contract_reminders()
+		msg = frappe.db.get_value(
+			"Email Queue", {"reference_doctype": "Employee Contract", "reference_name": c.name}, "message"
+		)
+		self.assertIn("&lt;b&gt;", msg)
+		self.assertIn("&lt;b&gt;x&lt;/b&gt; (", msg)

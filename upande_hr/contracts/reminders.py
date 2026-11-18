@@ -1,18 +1,18 @@
 import frappe
-from frappe.utils import date_diff, get_url_to_form, getdate, today
+from frappe.utils import date_diff, formatdate, get_url_to_form, getdate, today
 
 EMAIL_TEMPLATE = """
 <p>The following employee contract is ending {% if days_left == 0 %}today{% else %}in {{ days_left }} day(s){% endif %}.</p>
 <table>
-<tr><td><b>Employee</b></td><td>{{ employee_name }} ({{ employee }})</td></tr>
-<tr><td><b>Company</b></td><td>{{ company or "" }}</td></tr>
-<tr><td><b>Department</b></td><td>{{ department or "" }}</td></tr>
-<tr><td><b>Contract</b></td><td>#{{ contract_number }} ({{ employment_type }})</td></tr>
-<tr><td><b>Start date</b></td><td>{{ frappe.format(start_date, {"fieldtype": "Date"}) }}</td></tr>
-<tr><td><b>End date</b></td><td>{{ frappe.format(end_date, {"fieldtype": "Date"}) }}</td></tr>
+<tr><td><b>Employee</b></td><td>{{ employee_name | e }} ({{ employee | e }})</td></tr>
+<tr><td><b>Company</b></td><td>{{ (company or "") | e }}</td></tr>
+<tr><td><b>Department</b></td><td>{{ (department or "") | e }}</td></tr>
+<tr><td><b>Contract</b></td><td>#{{ contract_number | e }} ({{ employment_type | e }})</td></tr>
+<tr><td><b>Start date</b></td><td>{{ start_date | e }}</td></tr>
+<tr><td><b>End date</b></td><td>{{ end_date | e }}</td></tr>
 <tr><td><b>Days left</b></td><td>{{ days_left }}</td></tr>
 </table>
-<p><a href="{{ link }}">Open contract</a></p>
+<p><a href="{{ link | e }}">Open contract</a></p>
 """
 
 
@@ -80,8 +80,10 @@ def get_recipients(contract):
 		for up in frappe.get_all(
 			"User Permission",
 			{"user": ["in", list(valid)], "allow": "Company"},
-			["user", "for_value"],
+			["user", "for_value", "apply_to_all_doctypes", "applicable_for"],
 		):
+			if not up.apply_to_all_doctypes and up.applicable_for not in (None, "", "Employee Contract"):
+				continue
 			restricted.setdefault(up.user, set()).add(up.for_value)
 		valid = {u for u in valid if u not in restricted or contract.company in restricted[u]}
 
@@ -112,38 +114,52 @@ def send_contract_reminders(on_date=None):
 		],
 	)
 	for c in contracts:
-		if frappe.db.get_value("Employee", c.employee, "status") != "Active":
-			continue
-		days_left = date_diff(c.end_date, on_date)
-		p = due_point(days_left, points, _decode_last(c.last_reminder_days))
-		if p is None:
-			continue
+		frappe.db.savepoint("contract_reminder")
+		try:
+			_process_contract(c, points, on_date)
+		except Exception:
+			frappe.db.rollback(save_point="contract_reminder")
+			frappe.log_error(title=f"Contract reminder failed: {c.name}")
 
-		recipients = get_recipients(c)
-		if recipients:
-			prefix = "Contract ends today" if days_left == 0 else f"Contract ending in {days_left} days"
-			subject = f"{prefix}: {c.employee_name} ({c.employee}), contract #{c.contract_number}"
-			link = get_url_to_form("Employee Contract", c.name)
-			message = frappe.render_template(EMAIL_TEMPLATE, {**c, "days_left": days_left, "link": link, "frappe": frappe})
-			frappe.sendmail(
-				recipients=recipients,
-				subject=subject,
-				message=message,
-				reference_doctype="Employee Contract",
-				reference_name=c.name,
-			)
-			for user in recipients:
-				frappe.get_doc(
-					{
-						"doctype": "Notification Log",
-						"type": "Alert",
-						"for_user": user,
-						"subject": subject,
-						"document_type": "Employee Contract",
-						"document_name": c.name,
-					}
-				).insert(ignore_permissions=True)
-		frappe.db.set_value("Employee Contract", c.name, "last_reminder_days", _encode_last(p))
+
+def _process_contract(c, points, on_date):
+	if frappe.db.get_value("Employee", c.employee, "status") != "Active":
+		return
+	days_left = date_diff(c.end_date, on_date)
+	p = due_point(days_left, points, _decode_last(c.last_reminder_days))
+	if p is None:
+		return
+
+	recipients = get_recipients(c)
+	subject = message = None
+	if recipients:
+		prefix = "Contract ends today" if days_left == 0 else f"Contract ending in {days_left} days"
+		subject = f"{prefix}: {c.employee_name} ({c.employee}), contract #{c.contract_number}"
+		link = get_url_to_form("Employee Contract", c.name)
+		message = frappe.render_template(EMAIL_TEMPLATE, {**c, "start_date": formatdate(c.start_date), "end_date": formatdate(c.end_date), "days_left": days_left, "link": link})
+
+	# bookkeeping and logs first, sendmail last: if anything fails the savepoint rolls
+	# everything back, so the reminder is retried next run without a duplicate.
+	frappe.db.set_value("Employee Contract", c.name, "last_reminder_days", _encode_last(p))
+	for user in recipients:
+		frappe.get_doc(
+			{
+				"doctype": "Notification Log",
+				"type": "Alert",
+				"for_user": user,
+				"subject": subject,
+				"document_type": "Employee Contract",
+				"document_name": c.name,
+			}
+		).insert(ignore_permissions=True)
+	if recipients:
+		frappe.sendmail(
+			recipients=recipients,
+			subject=subject,
+			message=message,
+			reference_doctype="Employee Contract",
+			reference_name=c.name,
+		)
 
 
 def run_daily():
