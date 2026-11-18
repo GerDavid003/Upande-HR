@@ -209,3 +209,8 @@ class TestEmployeeContract(HRMSTestSuite):
 			self.skipTest("no second employee")
 		with self.assertRaises(frappe.ValidationError):
 			make_contract(other[0], "2026-04-01", "2026-06-30", submit=False, previous_contract=c1.name)
+
+	def test_dashboard_includes_contracts(self):
+		data = frappe.get_meta("Employee").get_dashboard_data()
+		items = [i for group in data.transactions for i in group.get("items", [])]
+		self.assertIn("Employee Contract", items)

@@ -125,6 +125,8 @@ fixtures = [
 # Doctype Class Overrides
 # ------------------------
 
+override_doctype_dashboards = {"Employee": "upande_hr.overrides.employee_dashboard.get_dashboard_data"}
+
 override_doctype_class = {
 	"Compensatory Leave Request": "upande_hr.overrides.compensatory_leave_request.CustomCompensatoryLeaveRequest"
 }
