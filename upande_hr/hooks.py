@@ -205,7 +205,11 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
+scheduler_events = {
+	"daily": ["upande_hr.contracts.reminders.run_daily"],
+}
+
+# scheduler_events_template = {
 # 	"all": [
 # 		"upande_hr.tasks.all"
 # 	],

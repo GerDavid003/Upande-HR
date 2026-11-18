@@ -1,0 +1,182 @@
+import frappe
+from frappe.utils import add_days, today
+from hrms.hr.doctype.attendance_request.test_attendance_request import get_employee
+from hrms.tests.utils import HRMSTestSuite
+
+from upande_hr.contracts.reminders import (
+	due_point,
+	get_recipients,
+	mark_expired_contracts,
+	send_contract_reminders,
+)
+from upande_hr.upande_hr.doctype.employee_contract.test_employee_contract import make_contract
+
+
+def make_user(email, roles=(), role_profile=None, enabled=1):
+	if frappe.db.exists("User", email):
+		frappe.delete_doc("User", email, force=True)
+	user = frappe.get_doc(
+		{"doctype": "User", "email": email, "first_name": email.split("@")[0], "enabled": enabled, "send_welcome_email": 0}
+	)
+	for r in roles:
+		user.append("roles", {"role": r})
+	if role_profile:
+		user.append("role_profiles", {"role_profile": role_profile})
+	user.insert(ignore_permissions=True)
+	return user.name
+
+
+def ensure_role(name):
+	if not frappe.db.exists("Role", name):
+		frappe.get_doc({"doctype": "Role", "role_name": name}).insert()
+
+
+class TestContractReminders(HRMSTestSuite):
+	def setUp(self):
+		super().setUp()
+		for name in ("Contract", "Probation", "Full-time"):
+			if not frappe.db.exists("Employment Type", name):
+				frappe.get_doc({"doctype": "Employment Type", "employee_type_name": name}).insert()
+		self.employee = get_employee()
+		frappe.db.set_value(
+			"Employee", self.employee.name, {"date_of_joining": "2020-01-01", "status": "Active", "reports_to": None}
+		)
+		for c in frappe.get_all("Employee Contract", {"employee": self.employee.name}, pluck="name"):
+			frappe.db.delete("Employee Contract", {"name": c})
+		ensure_role("Test Contract Role X")
+		ensure_role("Test Contract Role P")
+		if not frappe.db.exists("Role Profile", "Test Contract Profile P"):
+			frappe.get_doc(
+				{
+					"doctype": "Role Profile",
+					"role_profile": "Test Contract Profile P",
+					"roles": [{"role": "Test Contract Role P"}],
+				}
+			).insert()
+
+	def set_settings(self, enabled=1, points=(30, 14, 7, 0), roles=(), profiles=(), manager=0):
+		frappe.clear_document_cache("Upande HR Settings")
+		s = frappe.get_doc("Upande HR Settings")
+		s.enable_contract_expiry_reminders = 0
+		s.notify_reporting_manager = 0
+		s.set("contract_reminder_days", [])
+		s.set("contract_reminder_recipients", [])
+		s.modified = frappe.db.get_single_value("Upande HR Settings", "modified")
+		s.save()
+		s.enable_contract_expiry_reminders = enabled
+		s.notify_reporting_manager = manager
+		for p in points:
+			s.append("contract_reminder_days", {"days_before": p})
+		for r in roles:
+			s.append("contract_reminder_recipients", {"recipient_type": "Role", "recipient": r})
+		for p in profiles:
+			s.append("contract_reminder_recipients", {"recipient_type": "Role Profile", "recipient": p})
+		s.save()
+
+	def test_due_point(self):
+		pts = [30, 14, 7, 0]
+		self.assertEqual(due_point(20, pts, None), 30)
+		self.assertEqual(due_point(14, pts, 30), 14)
+		self.assertIsNone(due_point(14, pts, 14))
+		self.assertEqual(due_point(5, pts, 30), 7)
+		self.assertIsNone(due_point(-1, pts, None))
+		self.assertIsNone(due_point(40, pts, None))
+
+	def test_mark_expired(self):
+		e = self.employee.name
+		old = make_contract(e, add_days(today(), -60), add_days(today(), -1))
+		self.assertEqual(old.status, "Active")
+		mark_expired_contracts()
+		self.assertEqual(frappe.db.get_value("Employee Contract", old.name, "status"), "Expired")
+		cur = make_contract(e, today(), add_days(today(), 0))
+		mark_expired_contracts()
+		self.assertEqual(frappe.db.get_value("Employee Contract", cur.name, "status"), "Active")
+
+	def test_recipients_role_and_profile(self):
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		other = frappe.get_all("Company", filters={"name": ["!=", c.company]}, pluck="name", limit=1)
+		if not other:
+			other = [frappe.get_doc({"doctype": "Company", "company_name": "Test Other Co", "default_currency": "INR", "country": "India"}).insert().name]
+		a = make_user("rem_a@example.com", ["Test Contract Role X"])
+		b = make_user("rem_b@example.com", role_profile="Test Contract Profile P")
+		make_user("rem_c@example.com", ["Test Contract Role X"], enabled=0)
+		d = make_user("rem_d@example.com", ["Test Contract Role X"])
+		e = make_user("rem_e@example.com", ["Test Contract Role X"])
+		frappe.get_doc({"doctype": "User Permission", "user": d, "allow": "Company", "for_value": other[0]}).insert()
+		frappe.get_doc({"doctype": "User Permission", "user": e, "allow": "Company", "for_value": c.company}).insert()
+		self.set_settings(roles=["Test Contract Role X"], profiles=["Test Contract Profile P"])
+		recipients = get_recipients(c)
+		self.assertEqual(sorted(recipients), sorted([a, b, e]))
+		self.assertEqual(len(recipients), len(set(recipients)))
+
+	def test_reporting_manager_added(self):
+		mgr_emp = frappe.get_doc(
+			{
+				"doctype": "Employee",
+				"first_name": "Rem Manager",
+				"gender": "Female",
+				"date_of_birth": "1985-01-01",
+				"date_of_joining": "2019-01-01",
+				"company": self.employee.company,
+			}
+		)
+		mgr_user = make_user("rem_mgr@example.com")
+		mgr_emp.user_id = mgr_user
+		mgr_emp.insert()
+		frappe.db.set_value("Employee", self.employee.name, "reports_to", mgr_emp.name)
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		other = frappe.get_all("Company", filters={"name": ["!=", c.company]}, pluck="name", limit=1)
+		if other:
+			frappe.get_doc({"doctype": "User Permission", "user": mgr_user, "allow": "Company", "for_value": other[0]}).insert()
+		self.set_settings(roles=["Test Contract Role X"], manager=1)
+		self.assertIn(mgr_user, get_recipients(c))
+
+	def email_count(self, c):
+		return frappe.db.count("Email Queue", {"reference_doctype": "Employee Contract", "reference_name": c.name})
+
+	def test_send_once_per_point(self):
+		a = make_user("rem_a@example.com", ["Test Contract Role X"])
+		self.set_settings(roles=["Test Contract Role X"])
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		send_contract_reminders()
+		self.assertEqual(self.email_count(c), 1)
+		self.assertEqual(
+			frappe.db.count(
+				"Notification Log",
+				{"document_type": "Employee Contract", "document_name": c.name, "for_user": a, "type": "Alert"},
+			),
+			1,
+		)
+		self.assertEqual(frappe.db.get_value("Employee Contract", c.name, "last_reminder_days"), 14)
+		send_contract_reminders()
+		self.assertEqual(self.email_count(c), 1)
+
+	def test_zero_point_sent_once(self):
+		make_user("rem_a@example.com", ["Test Contract Role X"])
+		self.set_settings(roles=["Test Contract Role X"])
+		c = make_contract(self.employee.name, add_days(today(), -30), today())
+		send_contract_reminders()
+		send_contract_reminders()
+		self.assertEqual(self.email_count(c), 1)
+
+	def test_recipients_legacy_role_profile_name(self):
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		u = make_user("rem_f@example.com")
+		frappe.db.set_value("User", u, "role_profile_name", "Test Contract Profile P")
+		self.set_settings(profiles=["Test Contract Profile P"])
+		self.assertIn(u, get_recipients(c))
+
+	def test_no_recipients_still_marks(self):
+		self.set_settings(roles=["Test Contract Role P"])
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		send_contract_reminders()
+		self.assertEqual(self.email_count(c), 0)
+		self.assertEqual(frappe.db.get_value("Employee Contract", c.name, "last_reminder_days"), 14)
+
+	def test_disabled_sends_nothing(self):
+		make_user("rem_a@example.com", ["Test Contract Role X"])
+		self.set_settings(enabled=0, roles=["Test Contract Role X"])
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		send_contract_reminders()
+		self.assertEqual(self.email_count(c), 0)
+		self.assertFalse(frappe.db.get_value("Employee Contract", c.name, "last_reminder_days"))
