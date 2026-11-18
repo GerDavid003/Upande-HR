@@ -1,3 +1,5 @@
+import json
+
 import frappe
 
 MODULE = "Upande Hr"
@@ -22,30 +24,37 @@ def set_default_reminder_days():
 
 
 def before_uninstall():
-	"""Remove everything this app added to other apps' doctypes.
+	"""Record what after_uninstall must clean up. Performs NO writes and NO DDL.
 
-	Doctypes owned by the Upande Hr module (e.g. Employee Separation Type) are
-	dropped by Frappe's own remove_app. Custom Field / Property Setter records are
-	also deleted there, but their DB columns are left behind, so drop them here.
+	Frappe's remove_app runs this hook even for --dry-run (and before taking any
+	backup), so anything destructive here would really happen. Frappe itself deletes
+	the module's Custom Field / Property Setter records (only when not a dry run);
+	their DB columns are left behind, so remember them for after_uninstall.
 	"""
-	for cf in frappe.get_all(
-		"Custom Field", filters={"module": MODULE}, fields=["name", "dt", "fieldname", "fieldtype"]
-	):
-		frappe.delete_doc("Custom Field", cf.name, ignore_permissions=True, force=True)
-		_drop_column(cf.dt, cf.fieldname)
-		frappe.clear_cache(doctype=cf.dt)
-
-	for name in frappe.get_all("Property Setter", filters={"module": MODULE}, pluck="name"):
-		frappe.delete_doc("Property Setter", name, ignore_permissions=True, force=True)
-
-	_remove_contract_artifacts()
+	frappe.flags.upande_hr_uninstall_columns = [
+		(cf.dt, cf.fieldname)
+		for cf in frappe.get_all("Custom Field", filters={"module": MODULE}, fields=["dt", "fieldname"])
+	]
 
 
-def _remove_contract_artifacts():
-	"""Remove records in other apps' tables that reference this app's contracts/jobs."""
+def _app_installed():
+	# read fresh from the DB, not from a cache
+	return "upande_hr" in json.loads(frappe.db.get_global("installed_apps") or "[]")
+
+
+def after_uninstall():
+	"""Drop leftovers once the app is really removed (no-op for a dry run)."""
+	if _app_installed():
+		return  # dry run: remove_app did not remove us from installed apps
+
+	for dt, fieldname in frappe.flags.pop("upande_hr_uninstall_columns", None) or []:
+		_drop_column(dt, fieldname)
+		frappe.clear_cache(doctype=dt)
+
 	frappe.db.delete("Notification Log", {"document_type": "Employee Contract"})
 	frappe.db.delete("Scheduled Job Type", {"method": ["like", "upande_hr.%"]})
 	frappe.db.delete("Email Queue", {"reference_doctype": "Employee Contract", "status": "Not Sent"})
+	frappe.clear_cache()
 
 
 def _drop_column(doctype, fieldname):

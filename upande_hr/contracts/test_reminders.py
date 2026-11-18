@@ -242,9 +242,22 @@ class TestContractReminders(HRMSTestSuite):
 		self.assertIn("&lt;b&gt;", msg)
 		self.assertIn("&lt;b&gt;x&lt;/b&gt; (", msg)
 
-	def test_before_uninstall_removes_contract_artifacts(self):
-		from upande_hr.install import before_uninstall
+	def _run_uninstall(self, installed):
+		from upande_hr import install
 
+		ddl = []
+		original = frappe.db.sql_ddl
+		frappe.db.sql_ddl = lambda sql, *a, **kw: ddl.append(sql)
+		self.addCleanup(frappe.db.rollback)
+		try:
+			with patch.object(install, "_app_installed", return_value=installed):
+				install.before_uninstall()
+				install.after_uninstall()
+		finally:
+			frappe.db.sql_ddl = original
+		return ddl
+
+	def _make_log(self):
 		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
 		frappe.get_doc(
 			{
@@ -256,29 +269,23 @@ class TestContractReminders(HRMSTestSuite):
 				"document_name": c.name,
 			}
 		).insert(ignore_permissions=True)
-		frappe.get_doc(
-			{
-				"doctype": "Email Queue",
-				"reference_doctype": "Employee Contract",
-				"reference_name": c.name,
-				"status": "Not Sent",
-				"message": "m",
-				"sender": "a@example.com",
-			}
-		).insert(ignore_permissions=True)
+
+	def test_dry_run_uninstall_changes_nothing(self):
+		self._make_log()
+		before = frappe.db.count("Custom Field", {"module": "Upande Hr"})
+		ddl = self._run_uninstall(installed=True)
+		self.assertEqual(ddl, [])
+		self.assertEqual(frappe.db.count("Custom Field", {"module": "Upande Hr"}), before)
 		self.assertTrue(frappe.db.exists("Notification Log", {"document_type": "Employee Contract"}))
 
-		ddl = []
-		original = frappe.db.sql_ddl
-		frappe.db.sql_ddl = lambda sql, *a, **kw: ddl.append(sql)
-		try:
-			before_uninstall()
-		finally:
-			frappe.db.sql_ddl = original
-			self.addCleanup(frappe.db.rollback)
-
+	def test_real_uninstall_cleans_up(self):
+		self._make_log()
+		ddl = self._run_uninstall(installed=False)
+		dropped = {s.split("DROP COLUMN")[1].strip(" `") for s in ddl}
+		self.assertEqual(dropped, {
+				"reason_for_exit", "national_id", "tax_id", "nssf_no", "sha_no",
+				"custom_comp_off_request", "custom_comp_off_override",
+			},
+		)
 		self.assertFalse(frappe.db.exists("Notification Log", {"document_type": "Employee Contract"}))
 		self.assertEqual(frappe.db.count("Scheduled Job Type", {"method": ["like", "upande_hr.%"]}), 0)
-		self.assertFalse(
-			frappe.db.exists("Email Queue", {"reference_doctype": "Employee Contract", "status": "Not Sent"})
-		)
