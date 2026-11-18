@@ -38,6 +38,15 @@ def before_uninstall():
 	for name in frappe.get_all("Property Setter", filters={"module": MODULE}, pluck="name"):
 		frappe.delete_doc("Property Setter", name, ignore_permissions=True, force=True)
 
+	_remove_contract_artifacts()
+
+
+def _remove_contract_artifacts():
+	"""Remove records in other apps' tables that reference this app's contracts/jobs."""
+	frappe.db.delete("Notification Log", {"document_type": "Employee Contract"})
+	frappe.db.delete("Scheduled Job Type", {"method": ["like", "upande_hr.%"]})
+	frappe.db.delete("Email Queue", {"reference_doctype": "Employee Contract", "status": "Not Sent"})
+
 
 def _drop_column(doctype, fieldname):
 	meta = frappe.get_meta(doctype)

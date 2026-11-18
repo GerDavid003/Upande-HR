@@ -241,3 +241,44 @@ class TestContractReminders(HRMSTestSuite):
 		)
 		self.assertIn("&lt;b&gt;", msg)
 		self.assertIn("&lt;b&gt;x&lt;/b&gt; (", msg)
+
+	def test_before_uninstall_removes_contract_artifacts(self):
+		from upande_hr.install import before_uninstall
+
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		frappe.get_doc(
+			{
+				"doctype": "Notification Log",
+				"subject": "x",
+				"for_user": "Administrator",
+				"type": "Alert",
+				"document_type": "Employee Contract",
+				"document_name": c.name,
+			}
+		).insert(ignore_permissions=True)
+		frappe.get_doc(
+			{
+				"doctype": "Email Queue",
+				"reference_doctype": "Employee Contract",
+				"reference_name": c.name,
+				"status": "Not Sent",
+				"message": "m",
+				"sender": "a@example.com",
+			}
+		).insert(ignore_permissions=True)
+		self.assertTrue(frappe.db.exists("Notification Log", {"document_type": "Employee Contract"}))
+
+		ddl = []
+		original = frappe.db.sql_ddl
+		frappe.db.sql_ddl = lambda sql, *a, **kw: ddl.append(sql)
+		try:
+			before_uninstall()
+		finally:
+			frappe.db.sql_ddl = original
+			self.addCleanup(frappe.db.rollback)
+
+		self.assertFalse(frappe.db.exists("Notification Log", {"document_type": "Employee Contract"}))
+		self.assertEqual(frappe.db.count("Scheduled Job Type", {"method": ["like", "upande_hr.%"]}), 0)
+		self.assertFalse(
+			frappe.db.exists("Email Queue", {"reference_doctype": "Employee Contract", "status": "Not Sent"})
+		)
