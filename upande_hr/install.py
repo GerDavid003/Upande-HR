@@ -5,11 +5,13 @@ import frappe
 MODULE = "Upande Hr"
 DEFAULT_REMINDER_DAYS = (30, 14, 7, 0)
 CONTRACT = "Employee Contract"
+DEFAULT_EMAIL_TEMPLATE = "Contract Expiry Reminder"
 APP_DOCTYPES = (CONTRACT, "Upande HR Settings", "Contract Reminder Day", "Contract Reminder Recipient")
 
 
 def after_install():
 	set_default_reminder_days()
+	set_default_email_template()
 	from upande_hr.contracts.backfill import backfill_contracts
 
 	backfill_contracts()
@@ -23,6 +25,24 @@ def set_default_reminder_days():
 	for days in DEFAULT_REMINDER_DAYS:
 		settings.append("contract_reminder_days", {"days_before": days})
 	settings.save(ignore_permissions=True)
+
+
+def set_default_email_template():
+	"""Seed an editable reminder Email Template and select it, without touching client edits."""
+	from upande_hr.contracts.reminders import DEFAULT_SUBJECT, EMAIL_TEMPLATE
+
+	if not frappe.db.exists("Email Template", DEFAULT_EMAIL_TEMPLATE):
+		frappe.get_doc(
+			{
+				"doctype": "Email Template",
+				"name": DEFAULT_EMAIL_TEMPLATE,
+				"subject": DEFAULT_SUBJECT,
+				"use_html": 1,
+				"response_html": EMAIL_TEMPLATE.strip(),
+			}
+		).insert(ignore_permissions=True)
+	if not frappe.db.get_single_value("Upande HR Settings", "contract_reminder_email_template"):
+		frappe.db.set_single_value("Upande HR Settings", "contract_reminder_email_template", DEFAULT_EMAIL_TEMPLATE)
 
 
 def before_uninstall():
@@ -67,12 +87,7 @@ def _delete_app_records():
 	frappe.db.delete("Custom DocPerm", {"parent": ["in", doctypes]})
 	frappe.db.delete("Property Setter", {"doc_type": ["in", doctypes]})
 
-	for name in frappe.get_all("File", {"attached_to_doctype": CONTRACT}, pluck="name"):
-		try:
-			frappe.delete_doc("File", name, force=True, ignore_permissions=True)
-		except Exception:
-			# e.g. the file is already missing on disk; still remove the record
-			frappe.db.delete("File", {"name": name})
+	_delete_contract_files()
 
 	frappe.db.delete("Version", {"ref_doctype": CONTRACT})
 	frappe.db.delete("Comment", {"reference_doctype": CONTRACT})
@@ -91,7 +106,26 @@ def _delete_app_records():
 		frappe.db.delete("Scheduled Job Type", {"name": ["in", job_types]})
 
 	frappe.db.delete("Series", {"name": ["like", "HR-CON-%"]})
+	frappe.db.delete("Email Template", {"name": DEFAULT_EMAIL_TEMPLATE})
 	frappe.db.delete("Error Log", {"method": ["like", "Contract reminder failed%"]})
+
+
+def _delete_contract_files():
+	"""Remove contract attachments: the File records and their files on disk.
+
+	frappe.delete_doc("File") cannot be used here: its on_trash comments on the attached
+	Employee Contract, whose DocType is already gone, so it fails and the file stays on disk.
+	A file on disk is kept when another File record (e.g. on an Employee) shares its content.
+	"""
+	for name in frappe.get_all("File", {"attached_to_doctype": CONTRACT, "is_folder": 0}, pluck="name"):
+		file = frappe.get_doc("File", name)
+		frappe.db.delete("File", {"name": name})
+		if file.is_remote_file:
+			continue
+		try:
+			file._delete_file_on_disk()  # only unlinks if no other File shares the content
+		except Exception:
+			frappe.log_error(title=f"Upande HR uninstall: could not delete file {file.file_url}")
 
 
 def _drop_column(doctype, fieldname):

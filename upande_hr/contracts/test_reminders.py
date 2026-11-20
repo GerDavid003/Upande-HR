@@ -1,5 +1,6 @@
+import os
 import frappe
-from frappe.utils import add_days, today
+from frappe.utils import add_days, formatdate, today
 from hrms.hr.doctype.attendance_request.test_attendance_request import get_employee
 from hrms.tests.utils import HRMSTestSuite
 
@@ -56,7 +57,7 @@ class TestContractReminders(HRMSTestSuite):
 				}
 			).insert()
 
-	def set_settings(self, enabled=1, points=(30, 14, 7, 0), roles=(), profiles=(), manager=0):
+	def set_settings(self, enabled=1, points=(30, 14, 7, 0), roles=(), profiles=(), manager=0, template=None):
 		frappe.clear_document_cache("Upande HR Settings")
 		s = frappe.get_doc("Upande HR Settings")
 		s.enable_contract_expiry_reminders = 0
@@ -67,6 +68,7 @@ class TestContractReminders(HRMSTestSuite):
 		s.save()
 		s.enable_contract_expiry_reminders = enabled
 		s.notify_reporting_manager = manager
+		s.contract_reminder_email_template = template
 		for p in points:
 			s.append("contract_reminder_days", {"days_before": p})
 		for r in roles:
@@ -252,6 +254,102 @@ class TestContractReminders(HRMSTestSuite):
 		self.assertIn("&lt;b&gt;", msg)
 		self.assertIn("&lt;b&gt;x&lt;/b&gt; (", msg)
 
+	def make_template(self, subject, body, use_html=0):
+		name = "UHR Reminder Test Template"
+		if frappe.db.exists("Email Template", name):
+			frappe.delete_doc("Email Template", name, force=True)
+		doc = {"doctype": "Email Template", "name": name, "subject": subject, "use_html": use_html}
+		doc["response_html" if use_html else "response"] = body
+		return frappe.get_doc(doc).insert(ignore_permissions=True).name
+
+	def queued_message(self, c):
+		return frappe.db.get_value(
+			"Email Queue", {"reference_doctype": "Employee Contract", "reference_name": c.name}, "message"
+		)
+
+	def log_subject(self, c):
+		return frappe.db.get_value(
+			"Notification Log", {"document_type": "Employee Contract", "document_name": c.name}, "subject"
+		)
+
+	def test_custom_email_template_used(self):
+		make_user("rem_a@example.com", ["Test Contract Role X"])
+		tpl = self.make_template(
+			"Heads up: {{ employee_name }} in {{ days_left }}",
+			"<p>Custom body for {{ employee_name }}, ends {{ end_date }}, #{{ contract_number }} {{ link }}</p>",
+		)
+		self.set_settings(roles=["Test Contract Role X"], template=tpl)
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		send_contract_reminders()
+		self.assertEqual(self.log_subject(c), f"Heads up: {c.employee_name} in 10")
+		msg = self.queued_message(c)
+		self.assertIn("Custom body for", msg)
+		self.assertIn(formatdate(c.end_date), msg)
+		self.assertIn(c.name, msg)
+
+	def test_custom_html_email_template_used(self):
+		make_user("rem_a@example.com", ["Test Contract Role X"])
+		tpl = self.make_template("S {{ days_left }}", "<div>Raw html {{ employee }}</div>", use_html=1)
+		self.set_settings(roles=["Test Contract Role X"], template=tpl)
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		send_contract_reminders()
+		self.assertIn(f"Raw html {self.employee.name}", self.queued_message(c))
+
+	def test_custom_template_body_escaped(self):
+		make_user("rem_a@example.com", ["Test Contract Role X"])
+		tpl = self.make_template("S", "<p>Name: {{ employee_name }}</p>")
+		self.set_settings(roles=["Test Contract Role X"], template=tpl)
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		frappe.db.set_value("Employee Contract", c.name, "employee_name", "<b>x</b>")
+		send_contract_reminders()
+		self.assertIn("Name: &lt;b&gt;x&lt;/b&gt;", self.queued_message(c))
+
+	def test_default_template_seeded_and_linked(self):
+		from upande_hr.install import DEFAULT_EMAIL_TEMPLATE, set_default_email_template
+
+		self.set_settings(enabled=0)
+		frappe.delete_doc_if_exists("Email Template", DEFAULT_EMAIL_TEMPLATE, force=True)
+		set_default_email_template()
+		self.assertTrue(frappe.db.exists("Email Template", DEFAULT_EMAIL_TEMPLATE))
+		self.assertEqual(
+			frappe.db.get_single_value("Upande HR Settings", "contract_reminder_email_template"),
+			DEFAULT_EMAIL_TEMPLATE,
+		)
+
+		# re-running keeps the client's edits and their chosen template
+		frappe.db.set_value("Email Template", DEFAULT_EMAIL_TEMPLATE, "subject", "Edited")
+		other = self.make_template("S", "B")
+		frappe.db.set_single_value("Upande HR Settings", "contract_reminder_email_template", other)
+		set_default_email_template()
+		self.assertEqual(frappe.db.get_value("Email Template", DEFAULT_EMAIL_TEMPLATE, "subject"), "Edited")
+		self.assertEqual(
+			frappe.db.get_single_value("Upande HR Settings", "contract_reminder_email_template"), other
+		)
+
+	def test_seeded_template_matches_builtin_email(self):
+		from upande_hr.install import DEFAULT_EMAIL_TEMPLATE, set_default_email_template
+
+		frappe.delete_doc_if_exists("Email Template", DEFAULT_EMAIL_TEMPLATE, force=True)
+		set_default_email_template()
+		make_user("rem_a@example.com", ["Test Contract Role X"])
+		self.set_settings(roles=["Test Contract Role X"], template=DEFAULT_EMAIL_TEMPLATE, points=(1,))
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 1))
+		send_contract_reminders()
+		self.assertTrue(self.log_subject(c).startswith("Contract ending in 1 day:"), self.log_subject(c))
+		self.assertIn("Open contract", self.queued_message(c))
+
+	def test_uninstall_removes_seeded_template_only(self):
+		from upande_hr.install import DEFAULT_EMAIL_TEMPLATE, set_default_email_template
+
+		frappe.delete_doc_if_exists("Email Template", DEFAULT_EMAIL_TEMPLATE, force=True)
+		set_default_email_template()
+		client_tpl = self.make_template("S", "B")
+		self._run_uninstall(installed=True)
+		self.assertTrue(frappe.db.exists("Email Template", DEFAULT_EMAIL_TEMPLATE))
+		self._run_uninstall(installed=False)
+		self.assertFalse(frappe.db.exists("Email Template", DEFAULT_EMAIL_TEMPLATE))
+		self.assertTrue(frappe.db.exists("Email Template", client_tpl))
+
 	def _run_uninstall(self, installed):
 		from upande_hr import install
 
@@ -340,6 +438,54 @@ class TestContractReminders(HRMSTestSuite):
 			"error_log": frappe.db.exists("Error Log", {"method": ["like", "Contract reminder failed%"]}),
 			"series": frappe.db.exists("Series", {"name": ["like", "HR-CON-%"]}),
 		}
+
+	def _attach(self, doctype, docname, file_name, content):
+		return frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": file_name,
+				"content": content,
+				"attached_to_doctype": doctype,
+				"attached_to_name": docname,
+				"is_private": 1,
+			}
+		).insert(ignore_permissions=True)
+
+	def test_real_uninstall_removes_attachment_from_disk(self):
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		f = self._attach("Employee Contract", c.name, "contract_disk_test.txt", "unique contract scan " + frappe.generate_hash())
+		path = f.get_full_path()
+		self.addCleanup(lambda: os.path.exists(path) and os.remove(path))
+		self.assertTrue(os.path.exists(path))
+		# on a real uninstall the Employee Contract DocType is already gone; emulate that with a
+		# doctype that does not exist (frappe.delete_doc("File") fails on it before touching disk)
+		from upande_hr import install
+
+		frappe.db.set_value("File", f.name, "attached_to_doctype", "Removed Contract Doctype")
+		with patch.object(install, "CONTRACT", "Removed Contract Doctype"):
+			self._run_uninstall(installed=False)
+		self.assertFalse(frappe.db.exists("File", f.name))
+		self.assertFalse(os.path.exists(path))
+
+	def test_real_uninstall_keeps_file_shared_with_other_record(self):
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		content = "shared scan " + frappe.generate_hash()
+		mine = self._attach("Employee Contract", c.name, "shared_scan.txt", content)
+		other = self._attach("Employee", self.employee.name, "shared_scan.txt", content)
+		path = other.get_full_path()
+		self.addCleanup(lambda: os.path.exists(path) and os.remove(path))
+		self._run_uninstall(installed=False)
+		self.assertFalse(frappe.db.exists("File", mine.name))
+		self.assertTrue(frappe.db.exists("File", other.name))
+		self.assertTrue(os.path.exists(path))
+
+	def test_dry_run_keeps_attachment_on_disk(self):
+		c = make_contract(self.employee.name, add_days(today(), -30), add_days(today(), 10))
+		f = self._attach("Employee Contract", c.name, "dry_run_scan.txt", "dry run scan " + frappe.generate_hash())
+		path = f.get_full_path()
+		self.addCleanup(lambda: os.path.exists(path) and os.remove(path))
+		self._run_uninstall(installed=True)
+		self.assertTrue(os.path.exists(path))
 
 	def test_dry_run_uninstall_changes_nothing(self):
 		self._make_log()
