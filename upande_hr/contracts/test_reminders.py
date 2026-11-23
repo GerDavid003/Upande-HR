@@ -498,16 +498,20 @@ class TestContractReminders(HRMSTestSuite):
 		self.assertTrue(all(self._leftovers().values()), self._leftovers())
 
 	def test_real_uninstall_cleans_up(self):
+		# every column the app's custom fields own (layout-only fields have no column)
+		self.expected_columns = {
+			cf.fieldname
+			for cf in frappe.get_all("Custom Field", {"module": "Upande Hr"}, ["dt", "fieldname"])
+			if frappe.db.has_column(cf.dt, cf.fieldname)
+			and not frappe.db.exists("DocField", {"parent": cf.dt, "fieldname": cf.fieldname})
+		}
+		self.assertIn("reason_for_exit", self.expected_columns)
 		self._make_log()
 		self.assertTrue(all(self._leftovers().values()), self._leftovers())
 		ddl = self._run_uninstall(installed=False)
 		self.commit_mock.assert_called()
 		dropped = {s.split("DROP COLUMN")[1].strip(" `") for s in ddl}
-		self.assertEqual(dropped, {
-				"reason_for_exit", "national_id", "tax_id", "nssf_no", "sha_no",
-				"custom_comp_off_request", "custom_comp_off_override",
-			},
-		)
+		self.assertEqual(dropped, self.expected_columns)
 		self.assertFalse(frappe.db.exists("Notification Log", {"document_type": "Employee Contract"}))
 		self.assertEqual(frappe.db.count("Scheduled Job Type", {"method": ["like", "upande_hr.%"]}), 0)
 		self.assertFalse(any(self._leftovers().values()), self._leftovers())
