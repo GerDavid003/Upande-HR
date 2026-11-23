@@ -7,3 +7,4 @@
 upande_hr.patches.set_default_contract_reminder_days
 upande_hr.patches.backfill_employee_contracts
 upande_hr.patches.set_default_contract_email_template
+upande_hr.patches.backfill_leave_application_farm

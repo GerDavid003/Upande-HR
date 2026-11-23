@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import frappe
 from frappe.utils import add_days, getdate, nowdate
 from hrms.tests.utils import HRMSTestSuite
@@ -142,3 +144,57 @@ class TestCustomLeaveApplication(HRMSTestSuite):
 		)
 		self.assertFalse(annual_entry)
 		self.assertFalse(compassionate_entry)
+
+
+class TestLeaveApplicationFarmAndLeaveTypeGate(HRMSTestSuite):
+	def setUp(self):
+		# Gate the test company instead of the real "Karen Roses".
+		patcher = patch("upande_hr.overrides.leave_application.COMPASSIONATE_GATED_COMPANY", COMPANY)
+		patcher.start()
+		self.addCleanup(patcher.stop)
+
+	def _new_application(self, employee, leave_type):
+		return frappe.get_doc(
+			{
+				"doctype": "Leave Application",
+				"employee": employee,
+				"leave_type": leave_type,
+				"from_date": nowdate(),
+				"to_date": nowdate(),
+				"status": "Open",
+			}
+		)
+
+	def test_farm_is_fetched_from_employee(self):
+		employee = setup_karen_roses_employee()
+		farm = frappe.get_all("Farm", pluck="name", limit=1)
+		if not farm:
+			self.skipTest("No Farm records on this site")
+		frappe.db.set_value("Employee", employee, "custom_farm", farm[0])
+
+		doc = make_leave_application(employee, nowdate(), nowdate())
+		self.assertEqual(doc.custom_farm, farm[0])
+
+	def test_new_compassionate_leave_type_blocked_for_gated_company(self):
+		employee = setup_karen_roses_employee()
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot apply for Compassionate Leave directly"):
+			self._new_application(employee, "Compassionate Leave").insert()
+
+	def test_changing_to_compassionate_leave_type_blocked_for_gated_company(self):
+		employee = setup_karen_roses_employee()
+		doc = make_leave_application(employee, nowdate(), nowdate())
+		doc.leave_type = "Compassionate Leave"
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot apply for Compassionate Leave directly"):
+			doc.save()
+
+	def test_existing_compassionate_draft_can_still_be_saved(self):
+		employee = setup_karen_roses_employee()
+		with patch("upande_hr.overrides.leave_application.COMPASSIONATE_GATED_COMPANY", "_No Such Company"):
+			doc = self._new_application(employee, "Compassionate Leave").insert()
+		doc.description = "edited after the gate went live"
+		doc.save()  # must not raise
+
+	def test_compassionate_leave_type_allowed_for_other_companies(self):
+		employee = setup_karen_roses_employee()
+		with patch("upande_hr.overrides.leave_application.COMPASSIONATE_GATED_COMPANY", "_No Such Company"):
+			self._new_application(employee, "Compassionate Leave").insert()  # must not raise

@@ -21,9 +21,29 @@ class CustomLeaveApplication(LeaveApplication):
 		)
 
 	def validate(self):
+		self._validate_compassionate_leave_type_not_used()
 		super().validate()
 		if self._is_compassionate():
 			self._validate_compassionate_balance()
+
+	def _validate_compassionate_leave_type_not_used(self):
+		"""Karen Roses takes compassionate days via Annual Leave + "Is Compassionate?".
+
+		Only new applications (or a changed leave type) are blocked, so drafts that
+		already use Compassionate Leave can still be approved/submitted.
+		"""
+		if (
+			self.company == COMPASSIONATE_GATED_COMPANY
+			and self.leave_type == COMPASSIONATE_LEAVE_TYPE
+			and (self.is_new() or self.has_value_changed("leave_type"))
+		):
+			frappe.throw(
+				_(
+					"{0} employees cannot apply for {1} directly. Apply for Annual Leave and tick "
+					"'Is Compassionate?' instead."
+				).format(COMPASSIONATE_GATED_COMPANY, COMPASSIONATE_LEAVE_TYPE),
+				title=_("Leave Type Not Allowed"),
+			)
 
 	def validate_applicable_after(self):
 		if self._is_compassionate():
