@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 upande_hr.patches.set_default_contract_reminder_days
 upande_hr.patches.backfill_employee_contracts
+upande_hr.patches.set_default_contract_email_template

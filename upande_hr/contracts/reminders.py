@@ -1,18 +1,24 @@
 import frappe
-from frappe.utils import date_diff, formatdate, get_url_to_form, getdate, today
+from frappe.utils import date_diff, escape_html, formatdate, get_url_to_form, getdate, today
+
+# Built-in wording, used when no Email Template is chosen in Upande HR Settings. The app also
+# seeds an editable Email Template with this same text (see install.set_default_email_template).
+# Values are HTML-escaped before rendering the body (Frappe's Jinja does not autoescape), so
+# templates must not apply `| e` themselves.
+DEFAULT_SUBJECT = "Contract {{ days_text }}: {{ employee_name }} ({{ employee }}), contract #{{ contract_number }}"
 
 EMAIL_TEMPLATE = """
 <p>The following employee contract is ending {% if days_left == 0 %}today{% else %}in {{ days_left }} day(s){% endif %}.</p>
 <table>
-<tr><td><b>Employee</b></td><td>{{ employee_name | e }} ({{ employee | e }})</td></tr>
-<tr><td><b>Company</b></td><td>{{ (company or "") | e }}</td></tr>
-<tr><td><b>Department</b></td><td>{{ (department or "") | e }}</td></tr>
-<tr><td><b>Contract</b></td><td>#{{ contract_number | e }} ({{ employment_type | e }})</td></tr>
-<tr><td><b>Start date</b></td><td>{{ start_date | e }}</td></tr>
-<tr><td><b>End date</b></td><td>{{ end_date | e }}</td></tr>
+<tr><td><b>Employee</b></td><td>{{ employee_name }} ({{ employee }})</td></tr>
+<tr><td><b>Company</b></td><td>{{ company }}</td></tr>
+<tr><td><b>Department</b></td><td>{{ department }}</td></tr>
+<tr><td><b>Contract</b></td><td>#{{ contract_number }} ({{ employment_type }})</td></tr>
+<tr><td><b>Start date</b></td><td>{{ start_date }}</td></tr>
+<tr><td><b>End date</b></td><td>{{ end_date }}</td></tr>
 <tr><td><b>Days left</b></td><td>{{ days_left }}</td></tr>
 </table>
-<p><a href="{{ link | e }}">Open contract</a></p>
+<p><a href="{{ link }}">Open contract</a></p>
 """
 
 
@@ -122,6 +128,43 @@ def send_contract_reminders(on_date=None):
 			frappe.log_error(title=f"Contract reminder failed: {c.name}")
 
 
+def _get_email_template():
+	"""(subject, body) Jinja sources: the chosen Email Template, else the built-in wording."""
+	name = frappe.db.get_single_value("Upande HR Settings", "contract_reminder_email_template")
+	if name and frappe.db.exists("Email Template", name):
+		tpl = frappe.get_cached_doc("Email Template", name)
+		body = tpl.response_html if tpl.use_html else tpl.response
+		return tpl.subject or DEFAULT_SUBJECT, body or EMAIL_TEMPLATE
+	return DEFAULT_SUBJECT, EMAIL_TEMPLATE
+
+
+def _days_text(days_left):
+	if days_left == 0:
+		return "ends today"
+	return f"ending in {days_left} day{'s' if days_left != 1 else ''}"
+
+
+def render_reminder(c, days_left):
+	context = {
+		"employee": c.employee,
+		"employee_name": c.employee_name,
+		"company": c.company or "",
+		"department": c.department or "",
+		"contract": c.name,
+		"contract_number": c.contract_number,
+		"employment_type": c.employment_type,
+		"start_date": formatdate(c.start_date),
+		"end_date": formatdate(c.end_date),
+		"days_left": days_left,
+		"days_text": _days_text(days_left),
+		"link": get_url_to_form("Employee Contract", c.name),
+	}
+	subject_src, body_src = _get_email_template()
+	subject = frappe.render_template(subject_src, context).strip()
+	escaped = {k: escape_html(v) if isinstance(v, str) else v for k, v in context.items()}
+	return subject, frappe.render_template(body_src, escaped)
+
+
 def _process_contract(c, points, on_date):
 	if frappe.db.get_value("Employee", c.employee, "status") != "Active":
 		return
@@ -133,10 +176,7 @@ def _process_contract(c, points, on_date):
 	recipients = get_recipients(c)
 	subject = message = None
 	if recipients:
-		prefix = "Contract ends today" if days_left == 0 else f"Contract ending in {days_left} day{'s' if days_left != 1 else ''}"
-		subject = f"{prefix}: {c.employee_name} ({c.employee}), contract #{c.contract_number}"
-		link = get_url_to_form("Employee Contract", c.name)
-		message = frappe.render_template(EMAIL_TEMPLATE, {**c, "start_date": formatdate(c.start_date), "end_date": formatdate(c.end_date), "days_left": days_left, "link": link})
+		subject, message = render_reminder(c, days_left)
 
 	# bookkeeping and logs first, sendmail last: if anything fails the savepoint rolls
 	# everything back, so the reminder is retried next run without a duplicate.
