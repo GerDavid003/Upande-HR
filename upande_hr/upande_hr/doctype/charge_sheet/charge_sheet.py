@@ -12,7 +12,7 @@ submitted, so it is cancelled the ordinary way, which also cancels its Additiona
 The signature dates are stamped here from the state transition rather than typed in, so
 they record when each person actually acted.
 
-The workflow sends no email of its own. Each state has a Notification instead (fixtures),
+The workflow sends no email of its own. Each state has a Notification instead (site-managed, not shipped),
 and the Pending HOD Review one goes to hod_user, set below.
 
 On submit one Additional Salary is created per deduction row, against the "Charge Sheet
