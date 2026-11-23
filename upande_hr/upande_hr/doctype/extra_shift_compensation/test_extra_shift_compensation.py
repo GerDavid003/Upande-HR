@@ -340,8 +340,39 @@ class TestExtraShiftCompensation(HRMSTestSuite):
 	# ------------------------------------------------------------------- on submit
 
 	def test_submit_requires_at_least_one_approved_row(self):
-		doc = self.make_request([{"work_date": self.weekly_off, "reason": OFF_DAY, "row_status": "Pending"}])
+		doc = self.make_request([{"work_date": self.weekly_off, "reason": OFF_DAY, "row_status": "Rejected"}])
 		self.assertRaisesRegex(frappe.ValidationError, "must be marked", doc.submit)
+
+	def test_final_approval_approves_pending_rows(self):
+		doc = self.make_request(
+			[{"work_date": self.weekly_off, "reason": OFF_DAY, "row_status": "Pending"}], submit=True
+		)
+		doc.reload()
+		self.assertEqual(doc.entries[0].row_status, "Approved")
+		self.assertEqual(flt(self.get_allocation().new_leaves_allocated), 1.0)
+
+	def test_final_approval_keeps_an_explicitly_rejected_row(self):
+		doc = self.make_request(
+			[
+				{"work_date": self.weekly_off, "reason": OFF_DAY, "row_status": "Rejected"},
+				{"work_date": add_days(today(), -1), "reason": DOUBLE_SHIFT, "row_status": "Pending"},
+			],
+			submit=True,
+		)
+		doc.reload()
+		self.assertEqual([row.row_status for row in doc.entries], ["Rejected", "Approved"])
+		self.assertIsNone(doc.entries[0].leave_allocation)
+
+	def test_workflow_reject_rejects_every_row_and_credits_nothing(self):
+		doc = self.make_request(
+			[{"work_date": self.weekly_off, "reason": OFF_DAY, "row_status": "Approved"}]
+		)
+		doc.workflow_state = "Rejected"
+		doc.submit()
+		doc.reload()
+		self.assertEqual(doc.entries[0].row_status, "Rejected")
+		self.assertIsNone(doc.entries[0].leave_allocation)
+		self.assertIsNone(self.get_allocation())
 
 	def test_submit_creates_an_allocation_when_none_exists(self):
 		self.assertIsNone(self.get_allocation())

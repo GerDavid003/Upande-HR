@@ -14,6 +14,10 @@ DOUBLE_SHIFT = "Double Shift"
 
 SETTINGS = "Extra Shift Compensation Settings"
 
+# Workflow state the site's "Extra Shift Compensation Approval" workflow moves to on
+# Reject. It is a submitted (docstatus 1) state, so before_submit sees it.
+WORKFLOW_REJECTED = "Rejected"
+
 # Attendance statuses that mean the employee was recorded as working.
 PRESENT = "Present"
 
@@ -43,6 +47,9 @@ class ExtraShiftCompensation(Document):
 			self.check_overtime_overlap(row, settings)
 
 	def before_submit(self):
+		self.settle_row_statuses()
+		if self.workflow_state == WORKFLOW_REJECTED:
+			return
 		if not any(row.row_status == "Approved" for row in self.entries):
 			frappe.throw(
 				_("At least one entry must be marked {0} before this request can be submitted.").format(
@@ -68,6 +75,22 @@ class ExtraShiftCompensation(Document):
 				self.restore_attendance(row)
 			if row.leave_allocation:
 				self.debit_comp_off(row)
+
+	def settle_row_statuses(self):
+		"""The final approver acts on the parent, not on each row.
+
+		Submitting is the approval, so every row still Pending becomes Approved. A row
+		the approver explicitly Rejected stays Rejected - that is how one claim is
+		turned down without rejecting the whole request.
+
+		The site's workflow also submits on Reject (Rejected is a docstatus 1 state),
+		so a rejected parent rejects every row and credits nothing."""
+		rejected = self.workflow_state == WORKFLOW_REJECTED
+		for row in self.entries:
+			if rejected:
+				row.row_status = "Rejected"
+			elif row.row_status in (None, "", "Pending"):
+				row.row_status = "Approved"
 
 	# ------------------------------------------------------------------ validation
 

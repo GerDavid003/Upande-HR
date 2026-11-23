@@ -229,78 +229,16 @@ fixtures = [
 			]
 		],
 	},
-	# No Workflow fixture. Workflows are managed on each site's UI and a deploy must never
-	# overwrite them; do not re-add one without an explicit decision to.
+	# No Workflow, Workflow State, Workflow Action Master or Notification fixtures.
+	# These are managed on each site's UI and a deploy must never overwrite them; do not
+	# re-add any of them without an explicit decision to. Records already on a site are
+	# left alone - removing a fixture does not delete what it once imported.
 	#
-	# The workflows built on the UI reference states and actions that do not ship with
-	# Frappe, so these two masters still ship. "Open" is a stock Workflow State and is
-	# deliberately not re-shipped. "Draft" is not stock - Frappe ships only Pending,
-	# Approved and Rejected - so it ships here.
-	{
-		"doctype": "Workflow State",
-		"filters": [
-			[
-				"name",
-				"in",
-				[
-					"Under Investigation",
-					"Hearing Scheduled",
-					"Hearing Held",
-					"Decision",
-					"Appeal Requested",
-					"Appeal Hearing",
-					"Closed",
-					"Draft",
-					"Pending HR Review",
-					"Pending Employee Acknowledgement",
-					"Pending HOD Review",
-					"Pending HRM Review",
-					"Pending Group HR",
-					"Pending Finance",
-					# Stock (Approved) or already on the site (Cancelled), but with no style.
-					# Shipped so the Charge Sheet workflow shows them green and red.
-					"Approved",
-					"Cancelled",
-				],
-			]
-		],
-	},
-	{
-		"doctype": "Workflow Action Master",
-		"filters": [
-			[
-				"name",
-				"in",
-				[
-					"Start Investigation",
-					"Schedule Hearing",
-					"Close - No Case",
-					"Record Hearing",
-					"Record Decision",
-					"Close Case",
-					"Request Appeal",
-					"Schedule Appeal Hearing",
-					"Submit",
-					"Submit for HR Review",
-					"Acknowledge",
-					"Submit to HOD",
-					"Submit to HRM",
-					"Forward to HRM",
-					"Forward to Employee",
-					"Forward to Finance",
-					"Cancel",
-				],
-			]
-		],
-	},
 	# Charge Sheet permissions and the site's Charge Sheet workflow transitions name these.
 	{
 		"doctype": "Role",
 		"filters": [["name", "in", ["People Development", "Finance Controller", "Group HR Manager"]]],
 	},
-	# One Notification per Charge Sheet workflow state. The workflow's own email alert is
-	# off, so these are the only mails the sheet sends.
-	{"doctype": "Notification", "filters": [["document_type", "=", "Charge Sheet"]]},
 	# Hide Employee's standard single emergency contact in favour of
 	# custom_emergency_contacts. The column breaks go too, so the table spans the section.
 	# Existing values are moved into the table by patches.v1_0.move_emergency_contacts.
