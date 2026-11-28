@@ -403,7 +403,7 @@ class TestAbsentDeduction(IntegrationTestCase):
 		[tue] = self.rows_for(result, self.employee, TUESDAY)
 		[wed] = self.rows_for(result, self.employee, WEDNESDAY)
 		self.assertEqual(tue.action, ad.ACTION_DEDUCT)
-		self.assertIn(ad.IN_ONLY, tue.reason)
+		self.assertIn(ad.SINGLE_SCAN, tue.reason)
 		self.assertEqual((wed.action, wed.reason), (ad.ACTION_EXCUSED, "Employee Checkin"))
 
 	def test_night_shift_across_midnight_not_a_false_positive(self):
@@ -425,55 +425,59 @@ class TestAbsentDeduction(IntegrationTestCase):
 		# Without the shift (calendar day) Tuesday would be a lone IN, i.e. deducted.
 		self.assertEqual(ad.get_scan(self.employee, TUESDAY, shift=None)[0], ad.FULL_SCAN)
 		frappe.db.delete("Shift Assignment", {"employee": self.employee})
-		self.assertEqual(ad.get_scan(self.employee, TUESDAY)[0], ad.IN_ONLY)
+		self.assertEqual(ad.get_scan(self.employee, TUESDAY)[0], ad.SINGLE_SCAN)
 
-	def test_strict_log_type_shift_in_without_out_is_a_single_scan(self):
-		"""Strictly based on Log Type."""
+	def test_duplicate_punches_across_a_shift_are_not_a_single_scan(self):
+		"""SN-194 on 27 Oct: clocked 13:59 and 22:58 on a 14:00-23:00 shift, with the
+		devices' duplicate punches - 7 scans. Altura's odd-count rule deducted it."""
+		frappe.db.set_single_value("HR Settings", SINGLE_SCAN, 1)
+		assign_shift(self.employee, ALTERNATING_SHIFT, START)
+		mark_absent(self.employee, TUESDAY)
+		for time, log_type in (
+			("05:59:39", "IN"),
+			("05:59:42", "IN"),
+			("06:00:27", "OUT"),
+			("14:58:26", "OUT"),
+			("14:58:26", "OUT"),
+			("14:58:26", "OUT"),
+			("14:58:26", "IN"),
+		):
+			checkin(self.employee, f"{TUESDAY} {time}", log_type)
+		self.assert_excused(TUESDAY, "Employee Checkin")
+		scan, punches = ad.get_scan(self.employee, TUESDAY)
+		self.assertEqual((scan, len(punches)), (ad.FULL_SCAN, 2))
+
+	def test_scans_within_an_hour_are_a_single_scan(self):
 		frappe.db.set_single_value("HR Settings", SINGLE_SCAN, 1)
 		assign_shift(self.employee, STRICT_SHIFT, START)
 		for day in (MONDAY, TUESDAY, WEDNESDAY, FRIDAY):
 			mark_absent(self.employee, day)
-		checkin(self.employee, f"{MONDAY} 06:55:00", "IN")  # IN, no OUT
-		checkin(self.employee, f"{TUESDAY} 06:55:00", "IN")
-		checkin(self.employee, f"{TUESDAY} 16:05:00", "OUT")
-		checkin(self.employee, f"{WEDNESDAY} 16:05:00", "OUT")  # OUT, no IN
-		checkin(self.employee, f"{FRIDAY} 06:55:00", None)  # untyped: ignored under strict
-		checkin(self.employee, f"{FRIDAY} 16:05:00", None)
+		# A few taps at the door, one of them a duplicate: 3 punches over 40 minutes.
+		for time in ("07:00:00", "07:00:30", "07:20:00", "07:40:00"):
+			checkin(self.employee, f"{MONDAY} {time}", "IN")
+		# IN and OUT, but 59 minutes apart: still nothing after the first hour.
+		checkin(self.employee, f"{TUESDAY} 07:00:00", "IN")
+		checkin(self.employee, f"{TUESDAY} 07:59:00", "OUT")
+		# Exactly an hour apart: no longer a single scan.
+		checkin(self.employee, f"{WEDNESDAY} 07:00:00", "IN")
+		checkin(self.employee, f"{WEDNESDAY} 08:00:00", "IN")
+		# Log types do not matter: two INs nine hours apart is a day at work.
+		checkin(self.employee, f"{FRIDAY} 07:00:00", "IN")
+		checkin(self.employee, f"{FRIDAY} 16:00:00", "IN")
 
 		result = self.run_week(dry_run=1)
 		row = {r.absence_date: r for r in self.rows_for(result, self.employee)}
 		self.assertEqual(row[MONDAY].action, ad.ACTION_DEDUCT)
-		self.assertIn(ad.IN_ONLY, row[MONDAY].reason)
-		self.assertEqual((row[TUESDAY].action, row[TUESDAY].reason), (ad.ACTION_EXCUSED, "Employee Checkin"))
-		self.assertEqual(row[WEDNESDAY].action, ad.ACTION_DEDUCT)
-		self.assertIn(ad.OUT_ONLY, row[WEDNESDAY].reason)
-		self.assertEqual(row[FRIDAY].action, ad.ACTION_DEDUCT)
-		self.assertIn(ad.UNTYPED_SCANS, row[FRIDAY].reason)
+		self.assertIn(ad.CLUSTERED_SCANS.format(3, 40), row[MONDAY].reason)
+		self.assertEqual(row[TUESDAY].action, ad.ACTION_DEDUCT)
+		self.assertIn(ad.CLUSTERED_SCANS.format(2, 59), row[TUESDAY].reason)
+		for day in (WEDNESDAY, FRIDAY):
+			self.assertEqual((row[day].action, row[day].reason), (ad.ACTION_EXCUSED, "Employee Checkin"))
 
 		# Setting off (the default): any scan excuses the day.
 		frappe.db.set_single_value("HR Settings", SINGLE_SCAN, 0)
 		result = self.run_week(dry_run=1)
 		self.assertEqual({r.action for r in self.rows_for(result, self.employee)}, {ad.ACTION_EXCUSED})
-
-	def test_alternating_shift_odd_count_is_a_single_scan(self):
-		"""Alternating entries; log types are ignored."""
-		frappe.db.set_single_value("HR Settings", SINGLE_SCAN, 1)
-		assign_shift(self.employee, ALTERNATING_SHIFT, START)
-		for day in (MONDAY, TUESDAY, WEDNESDAY):
-			mark_absent(self.employee, day)
-		checkin(self.employee, f"{MONDAY} 05:58:00", "IN")  # 1 scan
-		checkin(self.employee, f"{TUESDAY} 05:58:00", "IN")  # 2 scans, both typed IN
-		checkin(self.employee, f"{TUESDAY} 15:03:00", "IN")
-		for time in ("05:58:00", "10:00:00", "11:00:00"):  # 3 scans
-			checkin(self.employee, f"{WEDNESDAY} {time}", None)
-
-		result = self.run_week(dry_run=1)
-		row = {r.absence_date: r for r in self.rows_for(result, self.employee)}
-		self.assertEqual(row[MONDAY].action, ad.ACTION_DEDUCT)
-		self.assertIn(ad.SINGLE_SCAN, row[MONDAY].reason)
-		self.assertEqual((row[TUESDAY].action, row[TUESDAY].reason), (ad.ACTION_EXCUSED, "Employee Checkin"))
-		self.assertEqual(row[WEDNESDAY].action, ad.ACTION_DEDUCT)
-		self.assertIn(ad.UNPAIRED_SCANS.format(3), row[WEDNESDAY].reason)
 
 	# --- balance ------------------------------------------------------------------
 

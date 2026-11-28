@@ -37,11 +37,10 @@ Settings Upande tab, Absenteeism Penalties section:
   allowance to end plus late allowance), so a night shift's OUT after midnight belongs
   to the right day. With no shift the calendar day is used.
 - custom_single_scan_counts_as_absent: off (default), any check-in excuses the day; on,
-  only a complete set does. What "complete" means follows the shift's "Determine
-  Check-in and Check-out": Strictly based on Log Type needs an IN and an OUT (an IN
-  without an OUT is a single scan); Alternating entries needs an even, non-zero count
-  (an odd count leaves the last scan unpaired). With no shift, an IN and an OUT, or two
-  or more untyped scans.
+  a day whose scans all fall within one hour of each other (duplicate punches counted
+  once) is still deducted - a lone IN with no OUT, or a few taps at the door. Scans
+  spread wider than an hour excuse the day whatever their count or log types (see
+  get_scan for why altura's count/log-type rule does not fit TSH).
 - Every employee-date handled is written to Absence Leave Deduction, whose name is
   employee + date: a day is deducted at most once, ever. Cancelling the Leave
   Application marks the row Reversed and the day is never deducted again. Flagged and
@@ -73,6 +72,8 @@ Notes on the Leave Application that gets created:
   same week finds nothing left to deduct. The Absence Leave Deduction row keeps the link
   to that Attendance, which is how the day stays identifiable as an absence.
 """
+
+from datetime import timedelta
 
 import frappe
 from frappe import _
@@ -115,20 +116,18 @@ ACTION_FLAG = "Flag"
 ACTION_EXCUSED = "Excused"
 ACTION_DONE = "Already processed"
 
-# How the day's check-ins look, within the shift window
+# How the day's check-ins look, within the shift window (see get_scan)
 NO_SCAN = "no clock-in or clock-out recorded"
-IN_ONLY = "a clock-in but no clock-out recorded"
-OUT_ONLY = "a clock-out but no clock-in recorded"
-SINGLE_SCAN = "a single scan recorded"
-UNPAIRED_SCANS = "{0} scans recorded (an odd number, so the last one is unpaired)"
-UNTYPED_SCANS = "scans recorded without an IN or OUT log type"
-FULL_SCAN = "clock-in and clock-out recorded"
+SINGLE_SCAN = "a single scan recorded and nothing after it"
+CLUSTERED_SCANS = "{0} scans recorded, all within {1} minutes and nothing after them"
+FULL_SCAN = "scans recorded across the shift"
+
+# Consecutive punches closer than this are one punch recorded more than once.
+DUPLICATE_GAP = timedelta(minutes=2)
+# All punches within this of the first: a single scan, not a day at work.
+SINGLE_SCAN_SPAN = timedelta(hours=1)
 
 NO_EMPLOYMENT_TYPE = "No Employment Type on the Employee record"
-
-# Shift Type.determine_check_in_and_check_out. HRMS treats anything but STRICT as
-# alternating, including an empty value.
-STRICT = "Strictly based on Log Type in Employee Checkin"
 
 # Outage guard: more than this share of the eligible employees Absent on one date means
 # the attendance itself is suspect, so nobody is deducted for that date.
@@ -550,7 +549,7 @@ def get_excuse(employee: str, date, settings=None, shift: str | None = None) -> 
 
 def get_checks(scan: str) -> list[str]:
 	"""What get_excuse() found, as sentences for the employee: one per check made."""
-	checks = [_("Clocking: {0} for your shift.").format(scan)]
+	checks = [_("Clocking during your shift: {0}.").format(scan)]
 	if has_gate_pass_workflow():
 		checks.append(_("No approved gate pass for the day."))
 	checks += [
@@ -573,40 +572,42 @@ def has_gate_pass_workflow() -> bool:
 
 
 def get_scan(employee: str, date, shift: str | None = None) -> tuple[str, list]:
-	"""How the day's check-ins look, within the shift window, read the way the shift's
-	"Determine Check-in and Check-out" setting reads them."""
+	"""How the day's check-ins look within the shift window: (description, punch times).
+
+	Duplicate punches - consecutive scans less than DUPLICATE_GAP apart, which TSH
+	devices record routinely (the same second four times over) - count once. The day is
+	a single scan when every punch falls within SINGLE_SCAN_SPAN of the first: a lone IN
+	with no OUT, or a few taps at the door. Scans spread wider than that mean the
+	employee was there, whatever their count or IN/OUT log types say.
+
+	Not the scan count or log types (altura's rule): all TSH shifts are "Alternating
+	entries", so an odd count was read as an unpaired IN, and with duplicate punches
+	someone clocked in 13:59 and out 22:58 came out as "7 scans, last one unpaired".
+	"""
 	date = getdate(date)
 	shift = resolve_shift(employee, date, shift)
 	start, end = get_checkin_window(employee, date, shift)
-	logs = frappe.get_all(
+	times = frappe.get_all(
 		"Employee Checkin",
 		filters={"employee": employee, "time": ["between", [start, end]]},
-		pluck="log_type",
+		pluck="time",
 		order_by="time",
 	)
-	if not logs:
-		return NO_SCAN, logs
+	if not times:
+		return NO_SCAN, times
 
-	types = {t for t in logs if t}
-	mode = shift and frappe.db.get_value("Shift Type", shift, "determine_check_in_and_check_out")
+	times = [get_datetime(t) for t in times]
+	punches = [times[0]]
+	for time in times[1:]:
+		if time - punches[-1] >= DUPLICATE_GAP:
+			punches.append(time)
 
-	if shift and mode != STRICT:
-		# Alternating entries: log types are ignored, scans pair up IN, OUT, IN, OUT...
-		if len(logs) % 2 == 0:
-			return FULL_SCAN, logs
-		return (SINGLE_SCAN if len(logs) == 1 else UNPAIRED_SCANS.format(len(logs))), logs
-
-	if {"IN", "OUT"} <= types:
-		return FULL_SCAN, logs
-	if types == {"IN"}:
-		return IN_ONLY, logs
-	if types == {"OUT"}:
-		return OUT_ONLY, logs
-	if mode == STRICT:
-		# HRMS ignores untyped scans under Strictly based on Log Type.
-		return UNTYPED_SCANS, logs
-	# No shift: two or more untyped scans are taken as a pair.
-	return (FULL_SCAN if len(logs) > 1 else SINGLE_SCAN), logs
+	if punches[-1] - punches[0] >= SINGLE_SCAN_SPAN:
+		return FULL_SCAN, punches
+	if len(punches) == 1:
+		return SINGLE_SCAN, punches
+	minutes = max(1, round((punches[-1] - punches[0]).total_seconds() / 60))
+	return CLUSTERED_SCANS.format(len(punches), minutes), punches
 
 
 def resolve_shift(employee: str, date, shift: str | None = None) -> str | None:

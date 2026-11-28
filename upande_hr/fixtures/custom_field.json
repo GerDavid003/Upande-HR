@@ -1685,7 +1685,7 @@
   "columns": 0,
   "default": "0",
   "depends_on": null,
-  "description": "Off: any check-in during the shift excuses an Absent day. On: a lone IN with no OUT, or OUT with no IN, is still deducted.",
+  "description": "Off: any check-in during the shift excuses an Absent day. On: a day whose scans all fall within one hour (duplicate punches counted once), such as a lone IN with no OUT, is still deducted.",
   "docstatus": 0,
   "doctype": "Custom Field",
   "dt": "HR Settings",
