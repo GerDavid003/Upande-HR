@@ -194,6 +194,15 @@ fixtures = [
 					"HR Settings-custom_attendance_label_map",
 					"HR Settings-custom_absent_deduction_section",
 					"HR Settings-custom_enable_absent_al_deduction",
+					# Deduction settings, read through attendance/absence_settings.py. The two
+					# Table MultiSelects need their child doctypes, which ship with this app.
+					"HR Settings-custom_absence_deduction_start_date",
+					"HR Settings-custom_absence_deduction_employment_types",
+					"HR Settings-custom_absence_deduction_exempt_employees",
+					"HR Settings-custom_absence_deduction_leave_type",
+					"HR Settings-custom_single_scan_counts_as_absent",
+					"HR Settings-custom_absence_on_insufficient_balance",
+					"HR Settings-custom_absence_lwp_leave_type",
 					"Leave Application-custom_auto_deducted",
 					"Attendance-custom_attendance_label",
 					# Away for Work on Attendance Request, built on the TSH UI and shipped
@@ -348,7 +357,14 @@ doc_events = {
 	"Leave Application": {
 		# No leave until this year's personal details are confirmed. A hook rather than a
 		# Server Script so it ships with the app and does not need server_script_enabled.
-		"before_insert": "upande_hr.upande_hr.doctype.employee_details_update.employee_details_update.gate_leave_application"
+		"before_insert": "upande_hr.upande_hr.doctype.employee_details_update.employee_details_update.gate_leave_application",
+		# HR cancelling an automatic absence deduction marks its log row Reversed, so the
+		# day is never deducted again.
+		"on_cancel": "upande_hr.attendance.absent_deduction.on_leave_application_cancel",
+	},
+	"HR Settings": {
+		# The absence deduction cannot be switched on without a Deduct From date.
+		"validate": "upande_hr.attendance.absence_settings.validate_hr_settings",
 	},
 	"Attendance Request": {
 		# on_submit is the Approved transition; HRMS has created the Attendance by then.
@@ -366,9 +382,11 @@ scheduler_events = {
 		"upande_hr.overrides.employee.refresh_years_of_service",
 	],
 	"cron": {
-		# Sunday 23:59 - closes out the Monday-Sunday week. Gated on
-		# HR Settings.custom_enable_absent_al_deduction inside the job.
-		"59 23 * * 0": ["upande_hr.attendance.absent_deduction.run_weekly"],
+		# Monday 06:00 - the Monday-Sunday week that ended yesterday, once auto-attendance
+		# has had the night to mark Sunday. The week comes from the run date, so a late
+		# start still picks the right one. Gated inside the job on
+		# HR Settings.custom_enable_absent_al_deduction and the Deduct From date.
+		"0 6 * * 1": ["upande_hr.attendance.absent_deduction.run_weekly"],
 	},
 }
 

@@ -7,3 +7,4 @@
 upande_hr.patches.v1_0.seed_grievance_types
 upande_hr.patches.v1_0.add_talent_pool_permlevel
 upande_hr.patches.v1_0.move_emergency_contacts
+upande_hr.patches.v1_0.seed_absence_deduction_settings

@@ -1,5 +1,7 @@
 import frappe
 
+from upande_hr.attendance.absence_email_templates import ensure_email_templates
+from upande_hr.attendance.absence_settings import seed_defaults as seed_absence_deduction_settings
 from upande_hr.setup.bank_permissions import grant_bank_permissions
 from upande_hr.setup.charge_sheet import ensure_charge_sheet_component
 from upande_hr.setup.grievance_types import seed_grievance_types
@@ -11,12 +13,15 @@ def after_install():
 	add_case_management_card()
 	ensure_charge_sheet_component()
 	grant_bank_permissions()
+	seed_absence_deduction_settings()
+	ensure_email_templates()
 
 
 def after_migrate():
 	add_case_management_card()
 	ensure_charge_sheet_component()
 	grant_bank_permissions()
+	ensure_email_templates()
 
 
 def before_uninstall():
