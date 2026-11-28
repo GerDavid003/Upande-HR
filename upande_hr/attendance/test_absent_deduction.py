@@ -52,12 +52,23 @@ START = add_days(MONDAY, -60)
 
 
 class TestAbsentDeduction(IntegrationTestCase):
+	SHOW_TRANSACTION_COMMIT_WARNINGS = True
+
 	def setUp(self):
 		frappe.db.savepoint("ald_test")
 		frappe.set_user("Administrator")
 		frappe.local.flags.pop("has_gate_pass", None)
 		self.company = frappe.db.get_value("Company", {}, "name", order_by="creation")
 		make_masters(self.company)
+		# Employees with no Employment Type are in scope by design (they get flagged), so
+		# on a site restored from live data the real ones would show up in every run.
+		# Park them on an out-of-scope type; the savepoint rollback restores them.
+		Employee = frappe.qb.DocType("Employee")
+		(
+			frappe.qb.update(Employee)
+			.set(Employee.employment_type, OTHER_ET)
+			.where(Employee.employment_type.isnull() | (Employee.employment_type == ""))
+		).run()
 		configure(
 			{
 				ENABLED: 1,
