@@ -165,7 +165,7 @@ fixtures = [
 					# custom_group_name to department, where it belongs. A Check field, so
 					# the Section Break walk above does not apply to it.
 					"Employee-custom_is_hod",
-					# MOD Off monthly allocation - see upande_hr/attendance/mod_off.py.
+					# MOD flag. MOD Off allocation was removed; the flag stays on its own.
 					"Employee-custom_is_mod",
 					# Employee Details Update. custom_details_confirmed_on takes
 					# custom_ethnicity's slot in the chain above and Family Members is
@@ -187,16 +187,13 @@ fixtures = [
 					# Property Setters below. A Table, not a break, so anchoring on the
 					# standard relation field keeps it inside Emergency Contact.
 					"Employee-custom_emergency_contacts",
-					# Absent -> Annual Leave deduction and attendance labels, on an Upande
-					# tab at the end of HR Settings.
+					# Upande tab at the end of HR Settings: Attendance Labels, then
+					# Absenteeism Penalties (Absent -> Annual Leave deduction).
 					"HR Settings-custom_upande_tab",
-					"HR Settings-custom_absent_deduction_section",
-					"HR Settings-custom_enable_absent_al_deduction",
-					"HR Settings-custom_mod_off_section",
-					"HR Settings-custom_enable_mod_off_allocation",
-					"HR Settings-custom_mod_off_leave_type",
 					"HR Settings-custom_attendance_labels_section",
 					"HR Settings-custom_attendance_label_map",
+					"HR Settings-custom_absent_deduction_section",
+					"HR Settings-custom_enable_absent_al_deduction",
 					"Leave Application-custom_auto_deducted",
 					"Attendance-custom_attendance_label",
 					# Away for Work on Attendance Request, built on the TSH UI and shipped
@@ -372,8 +369,6 @@ scheduler_events = {
 		# Sunday 23:59 - closes out the Monday-Sunday week. Gated on
 		# HR Settings.custom_enable_absent_al_deduction inside the job.
 		"59 23 * * 0": ["upande_hr.attendance.absent_deduction.run_weekly"],
-		# 1st of the month, 00:01. Gated on HR Settings.custom_enable_mod_off_allocation.
-		"1 0 1 * *": ["upande_hr.attendance.mod_off.run_monthly"],
 	},
 }
 
