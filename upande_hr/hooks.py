@@ -47,6 +47,7 @@ required_apps = ["upande_ta"]
 
 # include js in doctype views
 # doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {"Employee": "public/js/employee.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -130,6 +131,12 @@ fixtures = [
 					"HR Settings-custom_mod_generate_weeks_ahead",
 					"HR Settings-custom_mod_min_on_duty",
 					"Holiday List Assignment-custom_mod_roster",
+					# Probation tab on Employee, directly after the Overview tab (anchored on
+					# its last field, HRMS's grade).
+					"Employee-custom_probation_tab",
+					"Employee-custom_probation_start_date",
+					"Employee-custom_probation_period_days",
+					"Employee-custom_probation_end_date",
 				],
 			]
 		],
@@ -223,6 +230,8 @@ doc_events = {
 		"on_update": "upande_hr.attendance.mod_roster.on_holiday_list_update",
 	},
 	"Employee": {
+		# Probation tab: recalculates custom_probation_end_date on every save.
+		"validate": "upande_hr.employee.probation.set_probation_end_date",
 		"on_update": "upande_hr.attendance.mod_roster.on_employee_update",
 	},
 	"Leave Application": {
