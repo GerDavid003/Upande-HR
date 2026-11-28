@@ -102,12 +102,12 @@ class TestAbsentDeduction(IntegrationTestCase):
 	def test_checkbox_off_is_a_noop(self):
 		mark_absent(self.employee, TUESDAY)
 		frappe.db.set_single_value("HR Settings", ENABLED, 0)
-		with patch.object(ad, "deduct_unexcused_absences") as deduct:
+		with patch.object(ad, "deduct_recent_absences") as deduct:
 			ad.run_weekly()
 		deduct.assert_not_called()
 
 		frappe.db.set_single_value("HR Settings", ENABLED, 1)
-		with patch.object(ad, "deduct_unexcused_absences") as deduct:
+		with patch.object(ad, "deduct_recent_absences") as deduct:
 			ad.run_weekly()
 		deduct.assert_called_once()
 
@@ -484,6 +484,90 @@ class TestAbsentDeduction(IntegrationTestCase):
 		[again] = self.rows_for(self.run_week(), self.employee)
 		self.assertEqual((again.action, again.status), (ad.ACTION_DONE, ad.REVERSED))
 		self.assertEqual(frappe.db.count("Leave Application", {"employee": self.employee, "docstatus": 1}), 0)
+
+	# --- scheduled run window -----------------------------------------------------
+
+	def deducted_dates(self):
+		return sorted(
+			getdate(d)
+			for d in frappe.get_all(
+				"Leave Application",
+				filters={"employee": self.employee, "custom_auto_deducted": 1, "docstatus": 1},
+				pluck="from_date",
+			)
+		)
+
+	def test_sunday_2359_run_covers_monday_to_sunday(self):
+		for day in (MONDAY, SUNDAY):
+			mark_absent(self.employee, day)
+		self.assertEqual(ad.get_catch_up_window(f"{SUNDAY} 23:59:00")[1], SUNDAY)
+		ad.deduct_recent_absences(now=f"{SUNDAY} 23:59:00")
+		self.assertEqual(self.deducted_dates(), [MONDAY, SUNDAY])
+
+	def test_monday_midnight_run_covers_the_week_just_ended(self):
+		# Altura, 23 Nov 2026: the 23:59 Sunday job started at Monday 00:00:04.
+		next_monday = add_days(MONDAY, 7)
+		for day in (MONDAY, TUESDAY, SUNDAY, next_monday):
+			mark_absent(self.employee, day)
+		self.assertEqual(ad.get_catch_up_window(f"{next_monday} 00:00:04")[1], SUNDAY)
+		ad.deduct_recent_absences(now=f"{next_monday} 00:00:04")
+		self.assertEqual(self.deducted_dates(), [MONDAY, TUESDAY, SUNDAY])
+
+	def test_missed_week_is_picked_up_on_the_next_run(self):
+		mark_absent(self.employee, TUESDAY)
+		# No run for that week at all; the following week's run (a Monday start) finds it.
+		ad.deduct_recent_absences(now=f"{add_days(MONDAY, 14)} 00:00:04")
+		self.assertEqual(self.deducted_dates(), [TUESDAY])
+
+	def test_scheduled_rerun_deducts_nothing_twice(self):
+		mark_absent(self.employee, TUESDAY)
+		ad.deduct_recent_absences(now=f"{SUNDAY} 23:59:00")
+		# The next week's run covers the same days again.
+		summary = ad.deduct_recent_absences(now=f"{add_days(SUNDAY, 7)} 23:59:00")
+		self.assertEqual(summary["deducted"], [])
+		self.assertEqual(self.deducted_dates(), [TUESDAY])
+		self.assertEqual(frappe.db.count(ad.LOG, {"employee": self.employee}), 1)
+
+	def test_scheduled_run_never_before_start_date(self):
+		mark_absent(self.employee, MONDAY)
+		mark_absent(self.employee, FRIDAY)
+		frappe.db.set_single_value("HR Settings", START_DATE, WEDNESDAY)
+		self.assertEqual(ad.get_catch_up_window(f"{SUNDAY} 23:59:00", WEDNESDAY)[0], WEDNESDAY)
+		ad.deduct_recent_absences(now=f"{SUNDAY} 23:59:00")
+		self.assertEqual(self.deducted_dates(), [FRIDAY])
+		self.assertFalse(frappe.db.exists(ad.LOG, {"employee": self.employee, "absence_date": MONDAY}))
+
+	def test_scheduled_run_with_start_date_in_the_future_does_nothing(self):
+		mark_absent(self.employee, TUESDAY)
+		frappe.db.set_single_value("HR Settings", START_DATE, add_days(SUNDAY, 1))
+		self.assertIsNone(ad.deduct_recent_absences(now=f"{SUNDAY} 23:59:00"))
+		self.assertEqual(self.deducted_dates(), [])
+
+	def test_scheduled_run_window_is_two_weeks_back(self):
+		self.assertEqual(
+			ad.get_catch_up_window(f"{add_days(MONDAY, 14)} 00:00:04"),
+			(MONDAY, add_days(MONDAY, 13)),
+		)
+		self.assertEqual(
+			ad.get_catch_up_window(f"{add_days(MONDAY, 14)} 22:59:59"), (MONDAY, add_days(MONDAY, 13))
+		)
+		self.assertEqual(
+			ad.get_catch_up_window(f"{add_days(MONDAY, 14)} 23:00:00"), (MONDAY, add_days(MONDAY, 14))
+		)
+
+	def test_scheduled_run_does_not_reflag_a_flagged_day(self):
+		no_hla = make_employee(self.company, GRADE, "No HLA", hla=False)
+		mark_absent(no_hla, TUESDAY)
+		ad.deduct_recent_absences(now=f"{SUNDAY} 23:59:00")
+		self.assertEqual(frappe.db.get_value(ad.LOG, {"employee": no_hla}, "status"), ad.FLAGGED)
+		self.assertEqual(len(self.sent), 1)
+
+		summary = ad.deduct_recent_absences(now=f"{add_days(SUNDAY, 7)} 23:59:00")
+		self.assertEqual(summary["flagged"], [])
+		self.assertEqual(len(self.sent), 1)
+		# An explicit run by HR still re-checks it.
+		[row] = self.rows_for(self.run_week(), no_hla)
+		self.assertEqual(row.action, ad.ACTION_FLAG)
 
 	# --- outage guard -------------------------------------------------------------
 

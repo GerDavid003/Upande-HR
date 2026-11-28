@@ -3,8 +3,8 @@
 
 """Weekly Absent -> Annual Leave deduction.
 
-Every Sunday night each Attendance marked Absent in the Monday-Sunday week is checked
-against the ways an absence can be excused. An unexcused day is covered by a one-day
+Every Sunday night each Attendance marked Absent in the last two weeks (never before
+Deduct From) is checked against the ways an absence can be excused. An unexcused day is covered by a one-day
 Annual Leave Application, created and submitted directly at Approved with
 custom_auto_deducted = 1, and the employee is emailed.
 
@@ -38,6 +38,12 @@ Altura additions (settings in absence_settings.py, all on the HR Settings Upande
   setting decides: Skip and flag (row Flagged, nothing deducted) or Leave Without Pay
   (the day is booked against the LWP Leave Type instead).
 - run_absence_deduction() runs any date range, with a dry run that writes nothing.
+- The scheduled run does not work out "this week" from the date it runs on: the scheduler
+  starts a 23:59 Sunday job at Monday 00:00 often enough (Altura, 23 Nov 2026), and that
+  skipped every week. It covers CATCH_UP_DAYS back to the day that has just ended (see
+  get_catch_up_window), so a late start, a missed week or a Monday start all land on the
+  right days. The log's employee + date name keeps a re-covered day from being deducted
+  twice; a day already Flagged to HR is left for HR rather than re-flagged every run.
 - Holidays are read exactly as auto-attendance reads them (get_holiday_list): the shift's
   own Holiday List if it has one, else the employee's assignment on that date. MOD Roster
   lists (mod_roster.py) reach this through the assignment, so a MOD's OFF duty day is
@@ -59,11 +65,23 @@ Notes on the Leave Application that gets created:
   to that Attendance, which is how the day stays identifiable as an absence.
 """
 
+from datetime import timedelta
+
 import frappe
 from frappe import _
 from frappe.model.base_document import get_controller
 from frappe.query_builder.functions import Count
-from frappe.utils import add_days, cint, flt, formatdate, get_datetime, getdate, to_timedelta, today
+from frappe.utils import (
+	add_days,
+	cint,
+	flt,
+	formatdate,
+	get_datetime,
+	getdate,
+	now_datetime,
+	to_timedelta,
+	today,
+)
 from hrms.hr.doctype.leave_application.leave_application import (
 	get_employee_leave_approver,
 	get_leave_balance_on,
@@ -115,12 +133,41 @@ STRICT = "Strictly based on Log Type in Employee Checkin"
 # the attendance itself is suspect, so nobody is deducted for that date.
 OUTAGE_SHARE = 0.5
 
+# Scheduled run: how far back each run looks, and how close to midnight a run must be for
+# the day it runs on to count as finished (so the 23:59 Sunday run includes Sunday).
+CATCH_UP_DAYS = 14
+DAY_END_GRACE = timedelta(hours=1)
+
 
 def run_weekly():
 	"""Scheduler entry point - cron 59 23 * * 0."""
 	if not frappe.db.get_single_value("HR Settings", SETTINGS_FLAG):
 		return
-	deduct_unexcused_absences()
+	deduct_recent_absences()
+
+
+def get_catch_up_window(now=None, start_date=None) -> tuple:
+	"""(from_date, to_date) for a scheduled run at `now`.
+
+	to_date is the last day that has ended: yesterday, or today when the run is within
+	DAY_END_GRACE of midnight (the 23:59 Sunday run). from_date is CATCH_UP_DAYS before
+	today, never before Deduct From. from_date > to_date when Deduct From is in the future.
+	"""
+	now = get_datetime(now or now_datetime())
+	to_date = add_days(getdate(now + DAY_END_GRACE), -1)
+	from_date = add_days(getdate(now), -CATCH_UP_DAYS)
+	if start_date:
+		from_date = max(from_date, getdate(start_date))
+	return from_date, to_date
+
+
+def deduct_recent_absences(now=None) -> dict | None:
+	"""The scheduled run: every not-yet-handled Absent day in the catch-up window."""
+	from_date, to_date = get_catch_up_window(now, get_settings().start_date)
+	if from_date > to_date:
+		return None
+	result = _run(from_date, to_date, dry_run=False, skip_flagged=True)
+	return log_summary(result)
 
 
 @frappe.whitelist()
@@ -135,7 +182,10 @@ def deduct_unexcused_absences(week_of: str | None = None, employee: str | None =
 
 	week_start, week_end = get_week(week_of)
 	result = _run(week_start, week_end, dry_run=False, employee=employee)
+	return log_summary(result)
 
+
+def log_summary(result: dict) -> dict:
 	def pick(*actions):
 		return [
 			(r.employee, str(r.absence_date), r.leave_application or r.reason)
@@ -144,7 +194,7 @@ def deduct_unexcused_absences(week_of: str | None = None, employee: str | None =
 		]
 
 	summary = {
-		"week": f"{week_start} to {week_end}",
+		"week": f"{result['from_date']} to {result['to_date']}",
 		"deducted": pick(ACTION_DEDUCT, ACTION_LWP),
 		"excused": pick(ACTION_EXCUSED, ACTION_DONE),
 		"flagged": pick(ACTION_FLAG),
@@ -167,7 +217,7 @@ def run_absence_deduction(
 	return _run(getdate(from_date), getdate(to_date), dry_run=cint(dry_run), employee=employee)
 
 
-def _run(from_date, to_date, dry_run: bool, employee: str | None = None) -> dict:
+def _run(from_date, to_date, dry_run: bool, employee: str | None = None, skip_flagged: bool = False) -> dict:
 	settings = get_settings()
 	if not dry_run and not settings.start_date:
 		frappe.throw(_("Set Deduct From on HR Settings > Upande before running the deduction."))
@@ -178,6 +228,9 @@ def _run(from_date, to_date, dry_run: bool, employee: str | None = None) -> dict
 	# Counted over the whole eligible population even for a one-employee run, so that
 	# re-running a single employee cannot get round the guard.
 	outages = get_outages({getdate(a.attendance_date) for a in absences}, settings)
+	if skip_flagged:
+		# Already reported to HR by an earlier run; only an explicit run re-checks them.
+		absences = [a for a in absences if not is_flagged(a)]
 
 	rows = []
 	for absence in absences:
@@ -209,6 +262,10 @@ def _run(from_date, to_date, dry_run: bool, employee: str | None = None) -> dict
 		},
 		"rows": rows,
 	}
+
+
+def is_flagged(absence) -> bool:
+	return frappe.db.get_value(LOG, make_name(absence.employee, absence.attendance_date), "status") == FLAGGED
 
 
 def get_week(week_of: str | None) -> tuple:
